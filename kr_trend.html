@@ -222,7 +222,7 @@ function render() {
   if (tab === 'exit') {
     $('#body').innerHTML = rows.map(r => `<tr data-c="${r.code}" class="${selected === r.code ? 'sel' : ''}">
       <td class="nm">${isKR ? `<b>${r.name}</b> <span class="sub">${r.symbol}</span>` : `<b>${r.symbol}</b> <span class="sub">${r.name || ''}</span>`}</td>
-      <td style="text-align:left"><span class="sv ${SV_CLS(r.exit_severity)}">${r.exit_severity}</span></td>
+      <td style="text-align:left"><span class="sv ${SV_CLS(r.exit_severity)}">${r.exit_severity}</span>${r.exit_days >= 2 && r.exit_severity !== '재진입 시도' ? '<span class="tg tr" title="8/8 이탈 3일 연속 — 백테스트 최적 청산 규칙 충족">청산 신호</span>' : ''}</td>
       <td>${fmtD(r.exit_date)} <span class="sub">${r.exit_days}일 전</span></td>
       <td class="${sign(r.since_exit_pct)}">${fmt(r.since_exit_pct, 1)}%</td>
       <td>${r.exit_heavy ? `<b class="down">✓ ${fmt(r.exit_vol_ratio, 1)}배</b>` : `<span class="sub">${fmt(r.exit_vol_ratio, 1)}배</span>`}</td>
@@ -306,6 +306,7 @@ function exitHtml(r) {
   if (!r.exited) return '';
   return `<div class="exitbox"><h5>추세 이탈 <span class="sv ${SV_CLS(r.exit_severity)}">${r.exit_severity}</span> <span class="sub">${fmtD(r.exit_date)} (${r.exit_days}거래일 전) 이탈</span></h5>
     <div style="font-size:13px;line-height:1.7">${SV_TXT[r.exit_severity] || ''}</div>
+    ${r.exit_days >= 2 && r.exit_severity !== '재진입 시도' ? '<div style="font-size:13px;font-weight:700;color:var(--bad);margin-top:4px">청산 신호: 8/8 이탈 3일 연속 (백테스트 최적 청산 규칙 — 국내 PF 1.54)</div>' : `<div class="sub">8/8 이탈 ${r.exit_days + 1}일째 — 3일 연속이면 청산 신호</div>`}
     <div class="grid" style="margin:8px 0 0">
       <div class="kv"><span>이탈 계기 (그날 깨진 조건)</span><b style="white-space:normal">${(r.exit_lost || []).join(', ') || '–'}</b></div>
       <div class="kv"><span>현재 미충족 조건</span><b style="white-space:normal;font-weight:500">${(r.exit_now_fail || []).join(', ') || '–'}</b></div>
@@ -421,7 +422,7 @@ async function show(code) {
       ${kv('계좌 1% 위험 시 투자 비중', r.risk1_weight != null ? `계좌의 ${fmt(r.risk1_weight, 0)}%` : '–')}
       ${kv('가까운 저항 / 지지', `${levelTxt(s, '저항')} / ${levelTxt(s, '지지')}`)}
       ${kv('20일 고점 / 컨센서스', `${CUR}${fmtp(r.target, 2)} / ${r.cns_target ? `${CUR}${fmtp(r.cns_target, 0)} (${fmt((r.cns_target / r.close - 1) * 100, 0)}%)` : '–'}`)}</div>
-      <div class="sub" style="margin-top:6px;line-height:1.6">승률 30%라도 손익비 1:3이면 수익. 1R 도달 시 1/3 익절 + 손절을 본전으로, 2R에서 1/3, 3R 또는 트레일링 이탈에서 나머지. 불타기는 수익 중인 종목에만, 물타기 금지.</div></div>
+      <div class="sub" style="margin-top:6px;line-height:1.6"><b>청산 규칙(백테스트 최적)</b>: 추세 이탈(템플릿 8/8 상실) <b>3일 연속</b>이면 청산 + 초기 손절(-1R, 최대 -8%). 국내 반등 진입 평균 +2.6~3.9%, PF 1.5, 승률 21~29%(docs/BACKTEST_trend_hold.md). 수익은 1R·2R에서 일부 익절, 나머지는 추세 이탈까지 보유. 불타기는 수익 중인 종목에만, 물타기 금지.</div></div>
     <div class="mgroup"><h4>눌림 상태</h4><div class="grid">
       ${kv('20일 고점 대비', `${fmt(-r.depth_pct, 1)}% · ${r.days_since_high}일 경과`)}
       ${kv('되돌림 (피보나치)', `${fmt(r.retrace_pct, 0)}% · ${r.fib_zone || '–'}`)}
