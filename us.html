@@ -76,7 +76,7 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}tbody tr.sel{back
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:12px 0}
 .kv{background:var(--hover);border-radius:10px;padding:9px 11px}.kv span{display:block;color:var(--muted);font-size:11px}.kv b{font-weight:650;font-size:13px}
 .checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-#price{height:400px}#rsi{height:120px;border-top:1px solid var(--line)}
+#price{height:400px}#rsi{height:120px;border-top:1px solid var(--line)}#flowc{height:0;border-top:1px solid var(--line)}#flowc.on{height:130px}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--muted);margin:6px 0}
 .legend i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:4px}
 .why{margin-top:14px;border:1px solid var(--acc);border-radius:12px;padding:12px 14px;background:linear-gradient(0deg,var(--panel),var(--acc-soft))}
@@ -119,6 +119,14 @@ td.nm b{font-size:14px}td.nm .sub{font-size:12px}
 .tg{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:4px;vertical-align:1px}
 .tg.ld{background:rgba(201,133,0,.16);color:#a86d00}.tg.py{background:var(--acc-soft);color:var(--acc)}.tg.tr{background:rgba(210,63,49,.12);color:var(--bad)}
 .rbar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:6px 0 2px}.rbar i{display:block}
+.zbar{position:relative;display:flex;height:9px;border-radius:5px;overflow:hidden;min-width:120px}
+.zbar i{display:block;height:100%}.zbar i:nth-child(1){width:25%;background:#2f6fe0;opacity:.85}.zbar i:nth-child(2){width:50%;background:var(--line)}.zbar i:nth-child(3){width:25%;background:#e0343a;opacity:.8}
+.zwrap{position:relative;padding-top:9px}.zwrap b.mk{position:absolute;top:0;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--ink);transform:translateX(-5px)}
+.sfgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:14px;padding:10px 18px 16px}@media (max-width:1050px){.sfgrid{grid-template-columns:1fr}}
+.sflist{max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.sflist .row{display:grid;grid-template-columns:minmax(0,1fr) 130px 52px;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
+.sflist .row:hover{background:var(--hover)}.sflist .row.sel{background:var(--sel)}
+#sfchart{height:300px}
 .empty{padding:48px;text-align:center;color:var(--muted)}
 </style>
 </head>
@@ -132,6 +140,7 @@ td.nm b{font-size:14px}td.nm .sub{font-size:12px}
   <div class="pagehead"><h1 id="ttl">미국 추세·눌림목</h1><span class="sub" id="cnt"></span></div>
   <section class="card"><div class="sec-h"><span class="dot"></span>오늘의 시장 <span class="sub">시장 방향(M)</span></div><div id="market"></div></section>
   <div id="overview" style="display:contents"></div>
+  <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종 수급 오실레이터 <span class="sub">외국인+기관 20일 순매수 ÷ 업종 시총 · 현재 위치 = 최근 80개(≈4개월) 중 백분위 · P≤25 바텀권(수급 비움) / P≥75 과열권</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div></section>
   <main>
     <section class="card">
       <div class="listhead"><span style="font-weight:700;font-size:15px">종목 리스트</span><span class="count" id="count"></span><label class="colsw"><input type="checkbox" id="xcols"> 상세 지표</label>
@@ -147,13 +156,15 @@ td.nm b{font-size:14px}td.nm .sub{font-size:12px}
   <label><input type="checkbox" id="f8" checked> 템플릿 8/8만</label>
   <label><input type="checkbox" id="fPyr"> 불타기 신호</label>
   <label><input type="checkbox" id="fLead"> 사업상 대장</label>
+  <label title="외국인 20일 순매수÷시총이 최근 4개월 중 하위 25% — 추세 유지 중 외국인 단기 비움(백테스트 보유 평균 +4.8% vs 전체 +3.9%)"><input type="checkbox" id="fFbot"> 외인 바텀권</label>
+  <label title="4개월 누적 순매수선이 범위 하단 20% 이하(장기 이탈) 또는 기관 바텀권 — 백테스트상 성과 열위"><input type="checkbox" id="fFpos"> 장기이탈·기관비움 제외</label>
 </div>
       <div class="tablewrap"><table id="tbl"><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
     </section>
     <section class="card detailcard">
       <div class="detail" id="detail"><div class="empty">리스트에서 종목을 누르면 차트와 '왜 오르나' 분석이 나옵니다.</div></div>
       <div class="chartbar"><div class="seg" id="tf"><button data-tf="d" class="on">일봉</button><button data-tf="w">주봉</button></div><span class="sub" id="tfnote"></span></div>
-      <div id="price"></div><div id="rsi"></div>
+      <div id="price"></div><div id="rsi"></div><div id="flowc"></div><div id="flowleg" class="sub" style="padding:2px 18px 6px"></div>
       <div id="metrics"></div>
       <div class="detail" style="padding-top:6px"><div class="legend"><span><i style="background:#2a78d6"></i>EMA21</span><span><i style="background:#eda100"></i>50일선</span><span><i style="background:#8e6bd6"></i>150일선</span><span><i style="background:#d23f31"></i>200일선</span><span><i style="border-top:2px dashed #1b9e6c;height:0"></i>목표(20일 고점)</span><span><i style="border-top:2px dashed #d23f31;height:0"></i>손절(-1R)</span><span><i style="border-top:2px dotted #1b9e6c;height:0"></i>2R·3R 목표</span><span><i style="background:#f08c00;height:2px"></i>트레일링 스톱</span><span><i style="border-top:2px dashed #9a8f80;height:0"></i>60일 추세 채널</span><span><i style="background:#1b9e6c;height:3px"></i>상승 추세선</span><span><i style="background:#d23f31;height:3px"></i>하락 추세선</span><span><i style="border-top:3px dashed #ff3b3b;height:0"></i>저항</span><span><i style="border-top:3px dashed #3d8bff;height:0"></i>지지(×=스윙 터치 수)</span><span><i style="background:#eda100;height:3px"></i>차트 패턴</span><span>휠 확대 · 드래그 이동</span></div></div>
       <details class="method"><summary>판정 기준 · 백테스트 결과</summary><div class="note">추세 = 미너비니 트렌드 템플릿 8조건(종가·50/150/200일선 정배열, 200일선 상승, 52주 저점+30% 이상, 52주 고점 -25% 이내, RS 70 이상). 눌림목 = 추세 종목이 20일 고점 대비 3~15% 조정 · 상승 파동 38.2~61.8% 되돌림 · EMA21/50일선/매물대 지지 · 거래량 감소(조정 하락일 거래량 < 상승일) · RSI 40~55. 단계: 눌림 진행 → 지지 테스트 → 반등 시작(지지 후 전일 고가 돌파 = 전형적 진입). 손절은 구조적 지지와 오닐 -8% 중 가까운 쪽. 근거: 신한투자증권 추세 추종 백서(2024-03), 기술적 차트 분석 자료(2021-04). <b>백테스트(2024~2026, docs/BACKTEST_pullback.md)</b>: ① 국내는 시장(동일가중 지수)이 50일선 아래일 때 눌림 매수 20일 초과 -0.7% → 약세장에선 보류 ② 200일선 +70% 과열 종목 눌림은 양 시장 -1.6% → 점수 -30 ③ 50일선 지지 반등이 가장 강함(미국 20일 +3.3%) ④ 되돌림 38.2~61.8%가 얕은 눌림보다 40일 성과 우위 ⑤ 거래량 감소는 미국에서 유의. 손절만 두고 40일 보유가 짧은 목표가 청산보다 나았음(승률 20~35%, 평균 +1~3%). 노란선 = 차트 패턴(삼각수렴·웨지·플래그·쌍바닥/쌍봉·헤드앤숄더) 자동 인식, 패턴 자체는 백테스트 미포함.</div></details>
@@ -183,7 +194,7 @@ $('#cnt').textContent = `추세 후보 ${DATA.rows.length}종목`;
   $('#market').innerHTML = `<div class="kpis">${k('200일선 위 종목', m.above200 + '%', m.above200)}${k('50일선 위 종목', m.above50 + '%', m.above50)}${k('트렌드 템플릿 통과', m.template_pct + '%', m.template_pct * 5)}${k('동일가중 지수 (와인스타인)', m.ew_stage + '단계 <span class="sub">고점 대비 ' + m.ew_from_high + '%</span>')}</div>
     <div class="regime ${weak ? 'warn' : 'ok'}">${weak ? '약세 국면 — 시장이 약하면 주도주도 함께 하락. 비중 축소·신규 진입 신중 (백테스트: 약세장 눌림 매수 20일 -0.7%)' : '우호적 국면 — 눌림목 매수 유효'}</div>`; }
 let tab = 'pull', sortKey = 'pull_score', sortDir = -1, selected = null;
-const COLS = [['symbol','종목'],['why_rank','상승 이유'],['stage','단계'],['close','종가'],['pct','등락'],['rs','RS'],['pull_score','눌림점수'],['depth_pct','고점대비%'],['support','지지선'],
+const COLS = [['symbol','종목'],['why_rank','상승 이유'],['stage','단계'],['close','종가'],['pct','등락'],['rs','RS'],['pull_score','눌림점수'],['depth_pct','고점대비%'],['support','지지선'],['pct_f','외인 수급 P'],
   ['retrace_pct','되돌림%',1],['vol_ratio_5_50','거래량비',1],['rsi','RSI',1],['weinstein','W단계',1],['template_score','템플릿',1],['mktcap_b','시총',1],['industry','업종',1]];
 const EXCOLS = [['symbol','종목'],['exit_severity','이탈 강도'],['exit_days','이탈일'],['since_exit_pct','이탈 후'],['exit_heavy','대량거래'],['exit_lost','이탈 계기'],
   ['template_score','템플릿'],['exit_vs50','50일선 대비'],['exit_vs200','200일선 대비'],['rs','RS'],['why_rank','이전 상승 이유'],['industry','업종']];
@@ -210,7 +221,7 @@ function filtered() {
     && (!ind || r.industry === ind) && (!st || r.stage === st)
     && r.mktcap_b >= cap && (tab === 'exit' || r.rs >= mrs)
     && (tab === 'exit' || !$('#f8').checked || r.in_trend)
-    && (!$('#fPyr').checked || r.pyramid) && (!$('#fLead').checked || r.leader)
+    && (!$('#fFpos').checked || !((r.pos_f != null && r.pos_f <= 20) || (r.pct_o != null && r.pct_o <= 25))) && (!$('#fFbot').checked || (r.pct_f != null && r.pct_f <= 25)) && (!$('#fPyr').checked || r.pyramid) && (!$('#fLead').checked || r.leader)
     && (!$('#fDry').checked || r.vol_dry) && (!$('#fRsi').checked || r.rsi_zone))
     .sort((a, b) => { const x = a[sortKey], y = b[sortKey];
       if (typeof x === 'string' || typeof y === 'string') return sortDir * String(x ?? '').localeCompare(String(y ?? ''));
@@ -238,10 +249,10 @@ function render() {
     <td style="text-align:left">${r.why ? `<span class="cltag" title="${r.why.why}"><span class="dur ${DUR_DOT(r.why.durability)}"></span>${r.why.cluster}</span>` : '<span class="sub">–</span>'}</td>
     <td style="text-align:left"><span class="st ${ST_CLS(r.stage)}">${r.stage}</span></td>
     <td>${fmtp(r.close, 2)}</td><td class="${sign(r.pct)}">${fmt(r.pct, 2)}%</td>
-    <td><b>${fmt(r.rs, 0)}</b></td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td>
+    <td><b>${fmt(r.rs, 0)}</b></td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td><td title="외국인 수급 위치 P (기관 P${fmt(r.pct_o, 0)}) · 4개월 누적 포지션 ${fmt(r.pos_f, 0)}">${r.pct_f == null ? '–' : `<b style="color:${r.pct_f <= 25 ? '#2f6fe0' : r.pct_f >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.pct_f, 0)}</b>`}</td>
     <td class="xc">${fmt(r.retrace_pct, 0)}</td><td class="xc">${fmt(r.vol_ratio_5_50, 2)}</td><td class="xc">${fmt(r.rsi, 0)}</td>
     <td class="xc">${r.weinstein}</td><td class="xc">${r.template_score}/8</td><td class="xc">${fmt(r.mktcap_b, 1)}</td><td class="xc">${r.industry || ''}</td></tr>`).join('')
-    || `<tr><td colspan="16" class="empty">조건에 맞는 종목이 없습니다</td></tr>`;
+    || `<tr><td colspan="17" class="empty">조건에 맞는 종목이 없습니다</td></tr>`;
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
@@ -278,19 +289,72 @@ function renderOverview() {
   $('#overview').onclick = e => { const ch = e.target.closest('.chip[data-c]'); if (ch) { show(ch.dataset.c); document.querySelector('.detailcard').scrollIntoView({behavior: 'smooth'}); } };
 }
 setTimeout(renderOverview);
+const zbar = p => p == null ? '<span class="sub">–</span>' : `<div class="zwrap"><b class="mk" style="left:${Math.max(0, Math.min(100, p))}%"></b><div class="zbar"><i></i><i></i><i></i></div></div>`;
+let SF = null, sfKind = '산업군', sfZone = 'all', sfSel = null, sfc = null;
+async function initSector() {
+  if (META.market !== 'KR') return;
+  try { SF = await (await fetch(`${META.charts}/sector_flow.json`)).json(); } catch (e) { return; }
+  $('#sfcard').style.display = '';
+  const seg = (id, key, fn) => $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); fn(b.dataset[key]); renderSF(); };
+  seg('#sfkind', 'k', v => sfKind = v); seg('#sfzone', 'z', v => sfZone = v);
+  $('#sfq').oninput = renderSF;
+  $('#sflist').onclick = e => { const r = e.target.closest('.row'); if (r) { sfSel = r.dataset.g; renderSF(); drawSF(); } };
+  renderSF();
+}
+function renderSF() {
+  const q = $('#sfq').value.trim();
+  const items = Object.entries(SF).filter(([g, v]) => (q ? g.includes(q) : v.kind === sfKind) && v.pct != null
+    && (sfZone === 'all' || (sfZone === 'bot' ? v.pct <= 25 : v.pct >= 75))).sort((a, b) => a[1].pct - b[1].pct);
+  if (!sfSel || !SF[sfSel] || !items.find(([g]) => g === sfSel)) { sfSel = items.length ? items[0][0] : null; setTimeout(drawSF); }
+  $('#sflist').innerHTML = items.map(([g, v]) => `<div class="row ${g === sfSel ? 'sel' : ''}" data-g="${g}"><div><b>${g.replace(/^\[.*?\] /, '')}</b> <span class="sub">${v.n}종목 · 20일 시총 ${fmt(v.cap_chg20, 1)}%</span></div>${zbar(v.pct)}<div style="text-align:right"><b style="color:${v.pct <= 25 ? '#2f6fe0' : v.pct >= 75 ? '#e0343a' : 'inherit'}">P${fmt(v.pct, 0)}</b><br><span class="sub">${v.pct_5 != null ? (v.pct > v.pct_5 ? '▲' : v.pct < v.pct_5 ? '▼' : '–') + fmt(v.pct_5, 0) : ''}</span></div></div>`).join('')
+    || '<div class="empty">해당 구간 업종 없음</div>';
+}
+function drawSF() {
+  const v = SF && SF[sfSel]; if (!v) return;
+  $('#sftitle').innerHTML = `${sfSel} <span class="sub">현재 수급 위치 P${fmt(v.pct, 1)} (최근 80개 관측치) · 5일 전 P${fmt(v.pct_5, 0)}</span>`;
+  $('#sfzbar').innerHTML = zbar(v.pct) + '<div class="sub" style="display:flex;justify-content:space-between"><span>P0 바텀권</span><span>P25</span><span>P50</span><span>P75</span><span>과열권 P100</span></div>';
+  $('#sfmem').textContent = '시총 상위: ' + v.members.join(', ');
+  $('#sfchart').innerHTML = '';
+  sfc = LightweightCharts.createChart($('#sfchart'), {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
+    grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, autoSize: true, crosshair: {mode: 0},
+    leftPriceScale: {visible: true, borderVisible: false}, rightPriceScale: {borderVisible: false}});
+  const cap = sfc.addLineSeries({color: css('--ink'), lineWidth: 2, priceScaleId: 'left', priceLineVisible: false, title: '시가총액(억)'});
+  cap.setData(v.t.map((d, i) => ({time: d, value: v.cap[i]})));
+  const os = sfc.addLineSeries({color: '#e0343a', lineWidth: 2, priceScaleId: 'right', priceLineVisible: false, title: '수급오실레이터(%)'});
+  os.setData(v.t.map((d, i) => ({time: d, value: v.osc[i]})));
+  os.createPriceLine({price: 0, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: false});
+  sfc.timeScale().fitContent();
+}
+setTimeout(initSector);
+
 $('#body').onclick = e => { const tr = e.target.closest('tr[data-c]'); if (tr) show(tr.dataset.c); };
 
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-let pc, rc;
+let pc, rc, fc;
 function makeCharts() {
   const base = {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
     grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, rightPriceScale: {borderVisible: false},
     crosshair: {mode: 0}};
-  $('#price').innerHTML = ''; $('#rsi').innerHTML = '';
+  $('#price').innerHTML = ''; $('#rsi').innerHTML = ''; $('#flowc').innerHTML = ''; fc = null;
   pc = LightweightCharts.createChart($('#price'), {...base, autoSize: true, timeScale: {visible: false}});
   rc = LightweightCharts.createChart($('#rsi'), {...base, autoSize: true, timeScale: {borderVisible: false}});
   pc.timeScale().subscribeVisibleLogicalRangeChange(r => r && rc.timeScale().setVisibleLogicalRange(r));
   rc.timeScale().subscribeVisibleLogicalRangeChange(r => r && pc.timeScale().setVisibleLogicalRange(r));
+}
+function drawFlow(s, base) {
+  const el = $('#flowc');
+  if (!s.pf) { el.classList.remove('on'); $('#flowleg').innerHTML = ''; return; }
+  el.classList.add('on');
+  fc = LightweightCharts.createChart(el, {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
+    grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, rightPriceScale: {borderVisible: false}, crosshair: {mode: 0},
+    autoSize: true, timeScale: {visible: false}});
+  const mk = (vals, color, w) => { const l = fc.addLineSeries({color, lineWidth: w, priceLineVisible: false, lastValueVisible: true});
+    l.setData(s.t.map((d, i) => vals[i] == null ? null : {time: d, value: vals[i]}).filter(Boolean)); return l; };
+  const lf = mk(s.pf, '#e0343a', 2); mk(s.po, '#2f6fe0', 1.5);
+  [[75, '과열권'], [25, '바텀권']].forEach(([v, t]) => lf.createPriceLine({price: v, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: t}));
+  lf.applyOptions({autoscaleInfoProvider: () => ({priceRange: {minValue: 0, maxValue: 100}})});
+  [pc, rc].forEach(ch => ch.timeScale().subscribeVisibleLogicalRangeChange(r => r && fc && fc.timeScale().setVisibleLogicalRange(r)));
+  $('#flowleg').innerHTML = '<b style="color:#e0343a">━ 외국인</b> · <b style="color:#2f6fe0">━ 기관</b> 수급 위치 P(20일 순매수÷시총의 최근 80일 백분위) · P≤25 바텀권 = 단기 수급 비움 · P≥75 과열권';
 }
 const sma = (c, n) => c.map((_, i) => i < n - 1 ? null : c.slice(i - n + 1, i + 1).reduce((a, b) => a + b, 0) / n);
 const ema = (c, n) => { const k = 2 / (n + 1); let e = c[0]; return c.map((x, i) => (e = i ? x * k + e * (1 - k) : x)); };
@@ -355,6 +419,8 @@ function toWeekly(s) {
     if (mon !== key) { key = mon; out.t.push(d); out.o.push(s.o[i]); out.h.push(s.h[i]); out.l.push(s.l[i]); out.c.push(s.c[i]); out.v.push(s.v[i]); }
     else { const j = out.t.length - 1; out.h[j] = Math.max(out.h[j], s.h[i]); out.l[j] = Math.min(out.l[j], s.l[i]); out.c[j] = s.c[i]; out.v[j] += s.v[i]; }
   });
+  if (s.pf) { const m = {}; s.t.forEach((d, i) => { const dt = new Date(d + 'T00:00:00Z'); const k = new Date(dt - ((dt.getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10); m[k] = i; });
+    const idx = Object.values(m); out.pf = idx.map(i => s.pf[i]); out.po = idx.map(i => s.po[i]); }
   out.r = wilder(out.c, 14); return out;
 }
 function wilder(c, n) {
@@ -392,8 +458,9 @@ function drawChart() {
   rs.setData(t.map((d, i) => s.r[i] == null ? null : {time: d, value: s.r[i]}).filter(Boolean));
   [[70, css('--muted')], [40, '#1b9e6c']].forEach(([v, col]) => rs.createPriceLine({price: v, color: col, lineStyle: 2, lineWidth: 1, axisLabelVisible: true}));
   rs.applyOptions({autoscaleInfoProvider: () => ({priceRange: {minValue: 10, maxValue: 90}})});
+  drawFlow(s);
   const n = t.length;
-  requestAnimationFrame(() => { pc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); rc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); });
+  requestAnimationFrame(() => { pc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); rc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); if (fc) fc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); });
 }
 $('#tf').onclick = e => { const b = e.target.closest('button'); if (!b) return; TF = b.dataset.tf; try { localStorage.setItem('tf', TF); } catch (e) {} drawChart(); };
 async function show(code) {
@@ -427,7 +494,11 @@ async function show(code) {
       ${kv('20일 고점 대비', `${fmt(-r.depth_pct, 1)}% · ${r.days_since_high}일 경과`)}
       ${kv('되돌림 (피보나치)', `${fmt(r.retrace_pct, 0)}% · ${r.fib_zone || '–'}`)}
       ${kv('지지선 / RSI', `${r.support || '미도달'} / ${fmt(r.rsi, 1)}`)}
-      ${kv('거래량 5일÷50일', `${fmt(r.vol_ratio_5_50, 2)}${r.vol_dry ? ' ✓ 감소' : ''}`)}</div></div>
+      ${kv('거래량 5일÷50일', `${fmt(r.vol_ratio_5_50, 2)}${r.vol_dry ? ' ✓ 감소' : ''}`)}
+      ${r.pct_f != null ? kv('외국인 / 기관 수급 위치 (P, 4개월)', `P${fmt(r.pct_f, 0)} / P${fmt(r.pct_o, 0)}${r.pct_f <= 25 ? ' · 외국인 바텀권' : r.pct_f >= 75 ? ' · 외국인 과열권' : ''}`) : ''}
+      ${r.pos_f != null ? kv('외국인 4개월 누적 포지션 (0=가장 비움)', `${fmt(r.pos_f, 0)} · ${r.fpos_state || ''}`) : ''}
+      ${r.osc != null ? kv('수급 오실레이터 / 3개월 강도', `${fmt(r.osc, 1)} (${r.osc_state}) / ${fmt(r.str60, 1)}%`) : ''}</div>
+      ${r.pos_f != null ? '<div class="sub" style="margin-top:6px">백테스트(국내 반등 진입→3일 이탈 청산, 4개월 창): 외국인 수급 바텀권(P≤25) 진입 +4.8%(P≤10 +6.0%) vs 전체 +3.9% — 추세 유지 중 외국인 단기 비움은 기회(통계적 유의성은 아직 약함). 반대로 4개월 누적 포지션 장기 이탈(≤20) -1.8%, 기관 바텀권 +0.6%로 열위.</div>' : ''}</div>
     <div class="mgroup"><h4>추세 판정</h4><div class="checks" style="margin:0 0 8px">${CHK.map(([k, t]) => `<span class="badge ${r[k] ? 'ok' : 'warn'}">${r[k] ? '✓' : '✗'} ${t}</span>`).join('')}</div><div class="grid">
       ${kv('3개월 / 12개월', `${fmt(r.ret_3m, 0)}% / ${fmt(r.ret_12m, 0)}%`)}
       ${kv('200일선 이격', `${fmt(r.ext200_pct, 0)}%${r.overheated ? ' ⚠ 과열' : ''}`)}
