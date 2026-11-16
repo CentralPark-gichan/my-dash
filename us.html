@@ -140,11 +140,11 @@ td.nm b{font-size:14px}td.nm .sub{font-size:12px}
   <div class="pagehead"><h1 id="ttl">미국 추세·눌림목</h1><span class="sub" id="cnt"></span></div>
   <section class="card"><div class="sec-h"><span class="dot"></span>오늘의 시장 <span class="sub">시장 방향(M)</span></div><div id="market"></div></section>
   <div id="overview" style="display:contents"></div>
-  <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종 수급 오실레이터 <span class="sub">외국인+기관 20일 순매수 ÷ 업종 시총 · 현재 위치 = 최근 80개(≈4개월) 중 백분위 · P≤25 바텀권(수급 비움) / P≥75 과열권</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div></section>
+  <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종·종목 수급 오실레이터 <span class="sub">외국인+기관 20일 순매수 ÷ 업종 시총 · 현재 위치 = 최근 80개(≈4개월) 중 백분위 · P≤25 바텀권(수급 비움) / P≥75 과열권</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button><button data-k="종목">종목</button></div><div class="seg" id="sfbase" style="display:none"><button data-b="2" class="on">외국인 기준</button><button data-b="1">외+기</button><button data-b="3">기관</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div></section>
   <main>
     <section class="card">
       <div class="listhead"><span style="font-weight:700;font-size:15px">종목 리스트</span><span class="count" id="count"></span><label class="colsw"><input type="checkbox" id="xcols"> 상세 지표</label>
-        <div class="seg tabs"><button data-k="pull" class="on">눌림목</button><button data-k="trend">추세 전체</button><button data-k="exit">추세 이탈 (1개월)</button></div></div>
+        <div class="seg tabs"><button data-k="pull" class="on">눌림목</button><button data-k="trend">추세 전체</button><button data-k="flow" id="tabFlow">수급 비움·추세 유지</button><button data-k="exit">추세 이탈 (1개월)</button></div></div>
       <div class="filters">
   <label>검색 <input type="text" id="q" placeholder="티커·종목명"></label>
   <label>업종 <select id="ind"><option value="">전체</option></select></label>
@@ -198,6 +198,11 @@ const COLS = [['symbol','종목'],['why_rank','상승 이유'],['stage','단계'
   ['retrace_pct','되돌림%',1],['vol_ratio_5_50','거래량비',1],['rsi','RSI',1],['weinstein','W단계',1],['template_score','템플릿',1],['mktcap_b','시총',1],['industry','업종',1]];
 const EXCOLS = [['symbol','종목'],['exit_severity','이탈 강도'],['exit_days','이탈일'],['since_exit_pct','이탈 후'],['exit_heavy','대량거래'],['exit_lost','이탈 계기'],
   ['template_score','템플릿'],['exit_vs50','50일선 대비'],['exit_vs200','200일선 대비'],['rs','RS'],['why_rank','이전 상승 이유'],['industry','업종']];
+const FLCOLS = [['symbol','종목'],['flow_judge','판정'],['stage','단계'],['pct_s','외+기 P'],['pct_f','외국인 P'],['pct_o','기관 P'],['pos_f','외인 4개월 포지션'],
+  ['pct','등락'],['rs','RS'],['why_rank','상승 이유'],['industry','업종']];
+// 판정: 백테스트(research/flow_zone_test.py) — 외국인 단기 비움 우위, 외국인 4개월 장기 이탈·기관 단독 비움은 열위
+const FJ = r => r.pos_f != null && r.pos_f <= 20 ? ['장기 이탈 주의', 'v-warn', 2] : r.pct_f != null && r.pct_f <= 25 ? ['외국인 단기 비움 ✓', 'v-re', 0] : ['외+기 비움', 'v-rs', 1];
+DATA.rows.forEach(r => { const j = FJ(r); r.flow_judge = j[2]; r.flow_lab = j; });
 const SV_CLS = s => ({'붕괴':'v-break','이탈':'v-exit','경고':'v-warn','RS 약화':'v-rs','재진입 시도':'v-re'})[s] || 'v-rs';
 const SV_ORD = {'붕괴':0,'이탈':1,'경고':2,'RS 약화':3,'재진입 시도':4};
 DATA.rows.forEach(r => { if (r.exited) r.exit_sev_ord = SV_ORD[r.exit_severity] ?? 9; });
@@ -209,17 +214,17 @@ const DUR_DOT = d => !d ? '' : (/강/.test(d) && !/약/.test(d)) ? 'd-ok' : /약
 const isKR = META.market === 'KR';
 const inds = [...new Set(DATA.rows.map(r => r.industry).filter(Boolean))].sort();
 $('#ind').innerHTML += inds.map(i => `<option>${i}</option>`).join('');
-function renderHead() { $('#head').innerHTML = (tab === 'exit' ? EXCOLS : COLS).map(([k, t, x]) => `<th data-k="${k === 'exit_severity' ? 'exit_sev_ord' : k}" class="${x ? 'xc' : ''}">${t}</th>`).join(''); }
+function renderHead() { $('#head').innerHTML = (tab === 'exit' ? EXCOLS : tab === 'flow' ? FLCOLS : COLS).map(([k, t, x]) => `<th data-k="${k === 'exit_severity' ? 'exit_sev_ord' : k}" class="${x ? 'xc' : ''}">${t}</th>`).join(''); }
 renderHead();
 const stageBadge = s => ({'반등 시작':'ok','지지 테스트':'ok','눌림 진행':'','과열 근접':'warn','추세 이탈 위험':'warn','깊은 조정':'warn'})[s] ?? '';
 
 function filtered() {
   const q = $('#q').value.trim().toLowerCase(), ind = $('#ind').value, st = $('#stage').value;
   const cap = +$('#minCap').value || 0, mrs = +$('#minRs').value || 0;
-  return DATA.rows.filter(r => (tab === 'exit' ? r.exited : (!r.exited && (tab === 'trend' || r.pullback)))
+  return DATA.rows.filter(r => (tab === 'exit' ? r.exited : tab === 'flow' ? (r.in_trend && !r.exited && ((r.pct_s != null && r.pct_s <= 25) || (r.pct_f != null && r.pct_f <= 25))) : (!r.exited && (tab === 'trend' || r.pullback)))
     && (!q || r.symbol.toLowerCase().includes(q) || (r.name || '').toLowerCase().includes(q) || (r.name_en || '').toLowerCase().includes(q))
     && (!ind || r.industry === ind) && (!st || r.stage === st)
-    && r.mktcap_b >= cap && (tab === 'exit' || r.rs >= mrs)
+    && r.mktcap_b >= cap && (tab === 'exit' || tab === 'flow' || r.rs >= mrs)
     && (tab === 'exit' || !$('#f8').checked || r.in_trend)
     && (!$('#fFpos').checked || !((r.pos_f != null && r.pos_f <= 20) || (r.pct_o != null && r.pct_o <= 25))) && (!$('#fFbot').checked || (r.pct_f != null && r.pct_f <= 25)) && (!$('#fPyr').checked || r.pyramid) && (!$('#fLead').checked || r.leader)
     && (!$('#fDry').checked || r.vol_dry) && (!$('#fRsi').checked || r.rsi_zone))
@@ -230,6 +235,20 @@ function filtered() {
 function render() {
   const rows = filtered();
   $('#count').textContent = `${rows.length}종목 · 헤더 클릭 정렬`;
+  if (tab === 'flow') {
+    const col = p => p == null ? 'inherit' : p <= 25 ? '#2f6fe0' : p >= 75 ? '#e0343a' : 'inherit';
+    $('#body').innerHTML = rows.map(r => `<tr data-c="${r.code}" class="${selected === r.code ? 'sel' : ''}">
+      <td class="nm">${isKR ? `<b>${r.name}</b> <span class="sub">${r.symbol}</span>` : `<b>${r.symbol}</b> <span class="sub">${r.name || ''}</span>`}${r.leader ? '<span class="tg ld">대장</span>' : ''}</td>
+      <td style="text-align:left"><span class="sv ${r.flow_lab[1]}">${r.flow_lab[0]}</span></td>
+      <td style="text-align:left"><span class="st ${ST_CLS(r.stage)}">${r.stage}</span></td>
+      <td><b style="color:${col(r.pct_s)}">P${fmt(r.pct_s, 0)}</b></td><td><b style="color:${col(r.pct_f)}">P${fmt(r.pct_f, 0)}</b></td><td><b style="color:${col(r.pct_o)}">P${fmt(r.pct_o, 0)}</b></td>
+      <td style="color:${r.pos_f != null && r.pos_f <= 20 ? 'var(--bad)' : 'inherit'}">${fmt(r.pos_f, 0)}</td>
+      <td class="${sign(r.pct)}">${fmt(r.pct, 2)}%</td><td>${fmt(r.rs, 0)}</td>
+      <td style="text-align:left">${r.why ? `<span class="cltag"><span class="dur ${DUR_DOT(r.why.durability)}"></span>${r.why.cluster}</span>` : '<span class="sub">–</span>'}</td>
+      <td style="text-align:left">${r.industry || ''}</td></tr>`).join('') || `<tr><td colspan="11" class="empty">${META.market === 'KR' ? '조건에 맞는 종목이 없습니다' : '미국은 투자자별 수급 데이터가 없어 국내만 지원합니다'}</td></tr>`;
+    $('#count').innerHTML = `${rows.length}종목 · 템플릿 8/8 유지 + 최근 20일 외+기 또는 외국인 수급 위치 P≤25 · <span title="백테스트(반등 진입→3일 이탈 청산): 외국인 바텀권 +4.8% vs 전체 +3.9%, 외+기 바텀권 +2.9~3.3%, 외국인 4개월 장기 이탈 -1.8%">판정 기준 ⓘ</span>`;
+    return;
+  }
   if (tab === 'exit') {
     $('#body').innerHTML = rows.map(r => `<tr data-c="${r.code}" class="${selected === r.code ? 'sel' : ''}">
       <td class="nm">${isKR ? `<b>${r.name}</b> <span class="sub">${r.symbol}</span>` : `<b>${r.symbol}</b> <span class="sub">${r.name || ''}</span>`}</td>
@@ -256,7 +275,8 @@ function render() {
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
-  tab = b.dataset.k; sortKey = tab === 'pull' ? 'pull_score' : tab === 'exit' ? 'exit_days' : 'rs'; sortDir = -1; renderHead(); render(); });
+  tab = b.dataset.k; sortKey = tab === 'pull' ? 'pull_score' : tab === 'exit' ? 'exit_days' : tab === 'flow' ? 'flow_judge' : 'rs'; sortDir = tab === 'flow' ? 1 : -1; renderHead(); render(); });
+if (META.market !== 'KR') { const tf = document.getElementById('tabFlow'); if (tf) tf.style.display = 'none'; }
 $('#head').onclick = e => { const k = e.target.dataset.k; if (!k) return; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; render(); };
 document.querySelectorAll('.filters input,.filters select').forEach(el => el.oninput = render);
 $('#xcols').onchange = e => $('#tbl').classList.toggle('showx', e.target.checked);
@@ -290,18 +310,20 @@ function renderOverview() {
 }
 setTimeout(renderOverview);
 const zbar = p => p == null ? '<span class="sub">–</span>' : `<div class="zwrap"><b class="mk" style="left:${Math.max(0, Math.min(100, p))}%"></b><div class="zbar"><i></i><i></i><i></i></div></div>`;
-let SF = null, sfKind = '산업군', sfZone = 'all', sfSel = null, sfc = null;
+let SF = null, FI = null, sfKind = '산업군', sfZone = 'all', sfSel = null, sfc = null, sfBase = 2; const FCACHE = {};
 async function initSector() {
   if (META.market !== 'KR') return;
   try { SF = await (await fetch(`${META.charts}/sector_flow.json`)).json(); } catch (e) { return; }
+  try { FI = await (await fetch(`${META.charts}/flow_index.json`)).json(); } catch (e) { FI = {}; }
   $('#sfcard').style.display = '';
   const seg = (id, key, fn) => $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); fn(b.dataset[key]); renderSF(); };
-  seg('#sfkind', 'k', v => sfKind = v); seg('#sfzone', 'z', v => sfZone = v);
+  seg('#sfkind', 'k', v => { sfKind = v; sfSel = null; $('#sfbase').style.display = v === '종목' ? '' : 'none'; }); seg('#sfzone', 'z', v => sfZone = v); seg('#sfbase', 'b', v => sfBase = +v);
   $('#sfq').oninput = renderSF;
   $('#sflist').onclick = e => { const r = e.target.closest('.row'); if (r) { sfSel = r.dataset.g; renderSF(); drawSF(); } };
   renderSF();
 }
 function renderSF() {
+  if (sfKind === '종목') return renderSFStocks();
   const q = $('#sfq').value.trim();
   const items = Object.entries(SF).filter(([g, v]) => (q ? g.includes(q) : v.kind === sfKind) && v.pct != null
     && (sfZone === 'all' || (sfZone === 'bot' ? v.pct <= 25 : v.pct >= 75))).sort((a, b) => a[1].pct - b[1].pct);
@@ -309,7 +331,47 @@ function renderSF() {
   $('#sflist').innerHTML = items.map(([g, v]) => `<div class="row ${g === sfSel ? 'sel' : ''}" data-g="${g}"><div><b>${g.replace(/^\[.*?\] /, '')}</b> <span class="sub">${v.n}종목 · 20일 시총 ${fmt(v.cap_chg20, 1)}%</span></div>${zbar(v.pct)}<div style="text-align:right"><b style="color:${v.pct <= 25 ? '#2f6fe0' : v.pct >= 75 ? '#e0343a' : 'inherit'}">P${fmt(v.pct, 0)}</b><br><span class="sub">${v.pct_5 != null ? (v.pct > v.pct_5 ? '▲' : v.pct < v.pct_5 ? '▼' : '–') + fmt(v.pct_5, 0) : ''}</span></div></div>`).join('')
     || '<div class="empty">해당 구간 업종 없음</div>';
 }
+const BASE_NM = {1: '외+기', 2: '외국인', 3: '기관'};
+function renderSFStocks() {
+  const q = $('#sfq').value.trim().toLowerCase();
+  const items = Object.entries(FI || {}).filter(([c, v]) => v[sfBase] != null && (!q || c.includes(q) || v[0].toLowerCase().includes(q) || (v[6] || '').includes(q))
+    && (sfZone === 'all' || (sfZone === 'bot' ? v[sfBase] <= 25 : v[sfBase] >= 75))).sort((a, b) => a[1][sfBase] - b[1][sfBase]);
+  if (!sfSel || !(FI || {})[sfSel] || !items.find(([c]) => c === sfSel)) { sfSel = items.length ? items[0][0] : null; setTimeout(drawSF); }
+  const col = p => p == null ? 'inherit' : p <= 25 ? '#2f6fe0' : p >= 75 ? '#e0343a' : 'inherit';
+  $('#sflist').innerHTML = items.slice(0, 300).map(([c, v]) => `<div class="row ${c === sfSel ? 'sel' : ''}" data-g="${c}"><div><b>${v[0]}</b> <span class="sub">${c} · ${v[6] || ''} · ${fmt(v[5], 1)}조</span><br><span class="sub">외국인 <b style="color:${col(v[2])}">P${fmt(v[2], 0)}</b> · 기관 <b style="color:${col(v[3])}">P${fmt(v[3], 0)}</b> · 외+기 P${fmt(v[1], 0)}</span></div>${zbar(v[sfBase])}<div style="text-align:right"><b style="color:${col(v[sfBase])}">P${fmt(v[sfBase], 0)}</b><br><span class="sub">${BASE_NM[sfBase]}</span></div></div>`).join('')
+    || '<div class="empty">조건에 맞는 종목 없음</div>';
+  if (items.length > 300) $('#sflist').innerHTML += `<div class="sub" style="padding:8px">상위 300개만 표시 — 검색으로 좁혀 보세요 (${items.length}개)</div>`;
+}
+async function drawStockFlow(code) {
+  const v = FI[code]; if (!v) return;
+  if (!FCACHE[code]) { try { FCACHE[code] = await (await fetch(`${META.charts}/flow/${code}.json`)).json(); } catch (e) { return; } }
+  if (sfSel !== code) return;
+  const d = FCACHE[code], n = d.t.length - 1, cur = {1: d.ps[n], 2: d.pf[n], 3: d.po[n]}[sfBase];
+  $('#sftitle').innerHTML = `${v[0]} <span class="sub">${code} · ${BASE_NM[sfBase]} 수급 위치 P${fmt(cur, 1)} (최근 80개 관측치) · 외국인 P${fmt(d.pf[n], 0)} / 기관 P${fmt(d.po[n], 0)} / 외+기 P${fmt(d.ps[n], 0)}</span>`;
+  $('#sfzbar').innerHTML = zbar(cur) + '<div class="sub" style="display:flex;justify-content:space-between"><span>P0 바텀권</span><span>P25</span><span>P50</span><span>P75</span><span>과열권 P100</span></div>';
+  const tip = cur == null ? '' : cur <= 25 ? (sfBase === 3 ? '기관 바텀권 — 백테스트상 열위(기관 비움은 경고)' : '바텀권 — 추세가 살아 있다면 외국인 재매수 기대 구간(백테스트 +4.8% vs 전체 +3.9%)') : cur >= 75 ? '과열권 — 수급이 이미 많이 들어온 구간' : '';
+  $('#sfmem').innerHTML = `${tip ? '<b>' + tip + '</b> · ' : ''}<span style="color:#e0343a">━ 외+기</span> <span style="color:#f08c00">━ 외국인</span> <span style="color:#2f6fe0">━ 기관</span> (20일 순매수 ÷ 시총, %) · <a href="#" onclick="show('${code}');document.querySelector('.detailcard').scrollIntoView({behavior:'smooth'});return false">${DATA.rows.find(r => r.code === code) ? '종목 상세 보기' : ''}</a>`;
+  $('#sfchart').innerHTML = '';
+  sfc = LightweightCharts.createChart($('#sfchart'), {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
+    grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, autoSize: true, crosshair: {mode: 0},
+    leftPriceScale: {visible: true, borderVisible: false}, rightPriceScale: {borderVisible: false}});
+  const cap = sfc.addLineSeries({color: css('--ink'), lineWidth: 2, priceScaleId: 'left', priceLineVisible: false, title: '시가총액(억)'});
+  cap.setData(d.t.map((t, i) => d.cap[i] == null ? null : {time: t, value: d.cap[i]}).filter(Boolean));
+  [['s', '#e0343a', 2.5, '외+기'], ['f', '#f08c00', 1.5, '외국인'], ['o', '#2f6fe0', 1.5, '기관']].forEach(([k, col, w, nm]) => {
+    const l = sfc.addLineSeries({color: col, lineWidth: w, priceScaleId: 'right', priceLineVisible: false, lastValueVisible: k === 's', title: k === 's' ? '수급오실레이터(%)' : ''});
+    l.setData(d.t.map((t, i) => d[k][i] == null ? null : {time: t, value: d[k][i]}).filter(Boolean));
+    if (k === 's') l.createPriceLine({price: 0, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: false});
+  });
+  sfc.timeScale().fitContent();
+}
+function openStockFlow(code) {
+  if (!FI || !FI[code]) return;
+  sfKind = '종목'; sfSel = code; $('#sfq').value = FI[code][0];
+  $('#sfkind').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === '종목')); $('#sfbase').style.display = '';
+  renderSF(); drawSF(); $('#sfcard').scrollIntoView({behavior: 'smooth'});
+}
 function drawSF() {
+  if (sfKind === '종목') return drawStockFlow(sfSel);
   const v = SF && SF[sfSel]; if (!v) return;
   $('#sftitle').innerHTML = `${sfSel} <span class="sub">현재 수급 위치 P${fmt(v.pct, 1)} (최근 80개 관측치) · 5일 전 P${fmt(v.pct_5, 0)}</span>`;
   $('#sfzbar').innerHTML = zbar(v.pct) + '<div class="sub" style="display:flex;justify-content:space-between"><span>P0 바텀권</span><span>P25</span><span>P50</span><span>P75</span><span>과열권 P100</span></div>';
@@ -495,6 +557,7 @@ async function show(code) {
       ${kv('되돌림 (피보나치)', `${fmt(r.retrace_pct, 0)}% · ${r.fib_zone || '–'}`)}
       ${kv('지지선 / RSI', `${r.support || '미도달'} / ${fmt(r.rsi, 1)}`)}
       ${kv('거래량 5일÷50일', `${fmt(r.vol_ratio_5_50, 2)}${r.vol_dry ? ' ✓ 감소' : ''}`)}
+      ${r.pct_f != null ? `<div class="kv" style="cursor:pointer" onclick="openStockFlow('${r.code}')"><span>수급 오실레이터 차트</span><b style="color:var(--acc)">열기 ↗</b></div>` : ''}
       ${r.pct_f != null ? kv('외국인 / 기관 수급 위치 (P, 4개월)', `P${fmt(r.pct_f, 0)} / P${fmt(r.pct_o, 0)}${r.pct_f <= 25 ? ' · 외국인 바텀권' : r.pct_f >= 75 ? ' · 외국인 과열권' : ''}`) : ''}
       ${r.pos_f != null ? kv('외국인 4개월 누적 포지션 (0=가장 비움)', `${fmt(r.pos_f, 0)} · ${r.fpos_state || ''}`) : ''}
       ${r.osc != null ? kv('수급 오실레이터 / 3개월 강도', `${fmt(r.osc, 1)} (${r.osc_state}) / ${fmt(r.str60, 1)}%`) : ''}</div>
