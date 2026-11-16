@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>다이버전스 스크리너</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
-:root{--bg:#f7f7f5;--panel:#fff;--ink:#1a1a19;--sub:#5f5e5a;--muted:#8a8984;--line:#e4e3dc;--hover:#f1f0ea;--sel:#e8f0fb;--up:#d23f31;--down:#2a6fd6;--acc:#2a78d6;--warn:#c98500;--ok:#1b9e6c}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--panel:#1c1c1b;--ink:#f0efec;--sub:#c3c2b7;--muted:#898781;--line:#2f2f2d;--hover:#262624;--sel:#1f2b3d;--up:#ef5b4d;--down:#4a8cf0;--acc:#4a8cf0}}
-:root[data-theme="dark"]{--bg:#141413;--panel:#1c1c1b;--ink:#f0efec;--sub:#c3c2b7;--muted:#898781;--line:#2f2f2d;--hover:#262624;--sel:#1f2b3d;--up:#ef5b4d;--down:#4a8cf0;--acc:#4a8cf0}
+:root{--bg:#f4f5f8;--panel:#fff;--ink:#16171b;--sub:#4b4e57;--muted:#8b8f99;--line:#e7e8ee;--hover:#f6f6fa;--sel:#efedfd;--up:#e0343a;--down:#2f6fe0;--acc:#5b4fd6;--acc-soft:#efedfd;--warn:#c98500;--ok:#1b9e6c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111214;--panel:#1a1b1f;--ink:#eeeff2;--sub:#c3c5cc;--muted:#878b95;--line:#2a2c32;--hover:#22242a;--sel:#2a2546;--up:#ef5b4d;--down:#5b8ff0;--acc:#8b80f0;--acc-soft:#2a2546}}
+:root[data-theme="dark"]{--bg:#111214;--panel:#1a1b1f;--ink:#eeeff2;--sub:#c3c5cc;--muted:#878b95;--line:#2a2c32;--hover:#22242a;--sel:#2a2546;--up:#ef5b4d;--down:#5b8ff0;--acc:#8b80f0;--acc-soft:#2a2546}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,"Segoe UI","Malgun Gothic",sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 Pretendard,-apple-system,"Segoe UI","Malgun Gothic",sans-serif;-webkit-font-smoothing:antialiased}
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
 h1{font-size:18px;font-weight:600;margin:0}
 .sub{color:var(--muted);font-size:13px}
@@ -48,15 +49,29 @@ tbody tr.sel{background:var(--sel)}
 .legend i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:4px}
 .note{font-size:12px;color:var(--muted);margin-top:8px}
 .empty{padding:40px;text-align:center;color:var(--muted)}
+.topbar{position:sticky;top:0;z-index:10;background:var(--panel);border-bottom:1px solid var(--line)}
+.topbar .in{max-width:1480px;margin:0 auto;display:flex;align-items:center;gap:18px;padding:10px 20px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px}.brand i{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--acc),#9a8cff);display:inline-block}
+.navs{display:flex;gap:2px;flex-wrap:wrap}.navs a{padding:6px 12px;border-radius:8px;color:var(--sub);text-decoration:none;font-size:13.5px;font-weight:500}
+.navs a:hover{background:var(--hover)}.navs a.on{background:var(--acc-soft);color:var(--acc);font-weight:700}
+.topbar .day{margin-left:auto;color:var(--muted);font-size:12.5px}
+.pagehead{max-width:1480px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 20px 0}.pagehead h1{font-size:20px;letter-spacing:-.3px}
+.tabs{display:inline-flex!important;background:var(--hover);border-radius:10px;padding:3px;gap:0!important}
+.tabs button{border:0!important;background:transparent!important;color:var(--sub)!important;font-weight:600;font-size:13px}
+.tabs button.on{background:var(--panel)!important;color:var(--acc)!important;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.filters{max-width:1440px;margin:12px auto 0;border:1px solid var(--line)!important;border-radius:14px;padding:12px 18px!important}
+main{max-width:1480px;margin:0 auto}
+.card{border-radius:14px!important}
+th,td{padding:9px 10px!important}
 </style>
 </head>
 <body>
-<header>
-  <h1>다이버전스 스크리너</h1>
-  <span class="sub" id="day"></span>
-  <span style="display:flex;gap:12px"><a href="kr_trend.html" style="color:var(--acc);text-decoration:none;font-size:13px">국내 추세·눌림목</a><a href="us.html" style="color:var(--acc);text-decoration:none;font-size:13px">미국 추세·눌림목</a></span>
-  <div class="tabs"><button data-k="bull_st" class="on">단기 상승 (바닥 반등)</button><button data-k="bull_lt">장기 상승 (큰 바닥)</button><button data-k="bear">하락 (참고)</button></div>
-</header>
+<div class="topbar"><div class="in">
+  <div class="brand"><i></i>My Dash</div>
+  <nav class="navs"><a href="index.html" class="on">국내 다이버전스</a><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a></nav>
+  <span class="day" id="day"></span>
+</div></div>
+<div class="pagehead"><h1>다이버전스 스크리너</h1><span class="sub">RSI 상승 다이버전스 · 쌍바닥 반등</span><span style="margin-left:auto"><div class="tabs"><button data-k="bull_st" class="on">단기 상승 (바닥 반등)</button><button data-k="bull_lt">장기 상승 (큰 바닥)</button><button data-k="bear">하락 (참고)</button></div></span></div>
 <div class="filters">
   <label>검색 <input type="text" id="q" placeholder="종목명·코드"></label>
   <label>시장 <select id="mkt"><option value="">전체</option><option>KOSPI</option><option>KOSDAQ</option></select></label>
