@@ -43,6 +43,7 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}tbody tr.sel{back
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--muted);margin:6px 0}
 .legend i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:4px}
 .why{margin-top:12px;border:1px solid var(--line,#333);border-radius:10px;padding:10px 12px}.why-h{font-weight:700;font-size:14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.why p{margin:8px 0;line-height:1.6;font-size:13px}.why .reps{margin:8px 0 4px;padding-left:18px;font-size:12px;line-height:1.7}.why .reps a{color:inherit}
+.ov{padding:12px 20px;border-bottom:1px solid var(--line)}.ov summary{cursor:pointer;font-weight:700;font-size:14px}.ov .hl{margin:8px 0;font-size:13px;line-height:1.6;font-weight:600}.ov ul{margin:6px 0 10px;padding-left:18px;font-size:12.5px;line-height:1.7}.ov .cl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.ov .cc{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:12px}.ov .cc b{font-size:13px}.ov .chip{display:inline-block;margin:3px 4px 0 0;padding:1px 7px;border-radius:10px;border:1px solid var(--line);cursor:pointer;font-size:12px}.ov .chip:hover{border-color:#3d8bff}
 .note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
 .empty{padding:40px;text-align:center;color:var(--muted)}
 </style>
@@ -55,6 +56,7 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}tbody tr.sel{back
   <div class="tabs"><button data-k="pull" class="on">눌림목 (추세 중 조정)</button><button data-k="trend">추세 종목 전체</button></div>
 </header>
 <div id="market" style="padding:10px 20px;border-bottom:1px solid var(--line);font-size:13px"></div>
+<div id="overview"></div>
 <div class="filters">
   <label>검색 <input type="text" id="q" placeholder="티커·종목명"></label>
   <label>업종 <select id="ind"><option value="">전체</option></select></label>
@@ -133,6 +135,19 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   tab = b.dataset.k; sortKey = tab === 'pull' ? 'pull_score' : 'rs'; sortDir = -1; render(); });
 $('#head').onclick = e => { const k = e.target.dataset.k; if (!k) return; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; render(); };
 document.querySelectorAll('.filters input,.filters select').forEach(el => el.oninput = render);
+function renderOverview() {
+  const o = META.why_overview; if (!o) return;
+  const byC = {}; DATA.rows.forEach(r => { if (r.why) (byC[r.why.cluster] = byC[r.why.cluster] || []).push(r); });
+  const cards = (META.why_rank || []).filter(c => byC[c]).map((c, i) => {
+    const cl = META.why_clusters[c] || {};
+    const chips = byC[c].sort((a, b) => b.rs - a.rs).map(r => `<span class="chip" data-c="${r.code}" title="${r.why.why}">${r.name} <span class="sub">${r.stage}</span></span>`).join('');
+    return `<div class="cc"><b>${i + 1}. ${c}</b> <span class="badge ${DUR_CLS(cl.durability || '')}">지속성 ${cl.durability || '–'}</span><div>${chips}</div></div>`;
+  }).join('');
+  $('#overview').innerHTML = `<details class="ov" open><summary>추세 종목 종합 판단 — 어디가 오래 가나 <span class="sub">(${META.why_date} 평가 · 리포트·실적·수급·뉴스 기반)</span></summary>
+    <div class="hl">${o.headline}</div><ul>${o.points.map(p => `<li>${p}</li>`).join('')}</ul><div class="cl">${cards}</div></details>`;
+  $('#overview').onclick = e => { const ch = e.target.closest('.chip'); if (ch) { show(ch.dataset.c); $('#detail').scrollIntoView({behavior: 'smooth'}); } };
+}
+setTimeout(renderOverview);
 $('#body').onclick = e => { const tr = e.target.closest('tr[data-c]'); if (tr) show(tr.dataset.c); };
 
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
