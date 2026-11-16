@@ -42,6 +42,7 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}tbody tr.sel{back
 #price{height:380px}#rsi{height:120px;border-top:1px solid var(--line)}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--muted);margin:6px 0}
 .legend i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:4px}
+.why{margin-top:12px;border:1px solid var(--line,#333);border-radius:10px;padding:10px 12px}.why-h{font-weight:700;font-size:14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.why p{margin:8px 0;line-height:1.6;font-size:13px}.why .reps{margin:8px 0 4px;padding-left:18px;font-size:12px;line-height:1.7}.why .reps a{color:inherit}
 .note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
 .empty{padding:40px;text-align:center;color:var(--muted)}
 </style>
@@ -150,6 +151,19 @@ const sma = (c, n) => c.map((_, i) => i < n - 1 ? null : c.slice(i - n + 1, i + 
 const ema = (c, n) => { const k = 2 / (n + 1); let e = c[0]; return c.map((x, i) => (e = i ? x * k + e * (1 - k) : x)); };
 const CHK = [['t1_above_150_200','종가>150·200일'],['t2_150_over_200','150>200일'],['t3_200_rising','200일선 상승'],['t4_50_over_150_200','50>150·200일'],['t5_above_50','종가>50일'],['t6_30pct_above_low','52주저점+30%'],['t7_within_25pct_high','52주고점-25%내'],['t8_rs70','RS≥70']];
 const chartCache = {};
+const DUR_CLS = d => /강/.test(d) && !/약/.test(d) ? 'ok' : /약|확인/.test(d) ? 'warn' : '';
+function whyHtml(r) {
+  const w = r.why; if (!w) return '';
+  const cl = (META.why_clusters || {})[w.cluster] || {};
+  const reps = (w.reports || []).map(x => `<li><a href="${x.url}" target="_blank">${x.date} ${x.broker} · ${x.title}</a>${x.pdf ? ` <a href="${x.pdf}" target="_blank">[PDF]</a>` : ''}</li>`).join('');
+  return `<div class="why"><div class="why-h">왜 오르나 <span class="badge">${w.cluster}</span> <span class="badge ${DUR_CLS(w.durability)}">지속성 ${w.durability}</span> <span class="sub">${w.driver}</span></div>
+    <p>${w.why}</p>
+    <div class="grid"><div class="kv"><span>리스크</span><b style="font-weight:500;white-space:normal">${w.risk || '–'}</b></div>
+    <div class="kv"><span>확인할 것</span><b style="font-weight:500;white-space:normal">${w.watch || '–'}</b></div>
+    <div class="kv" style="grid-column:1/-1"><span>산업 판단 (${w.cluster} · 지속성 ${cl.durability || '–'})</span><b style="font-weight:500;white-space:normal">${cl.summary || ''}</b></div></div>
+    ${reps ? `<ul class="reps">${reps}</ul>` : '<div class="sub">최근 6개월 증권사 리포트 없음</div>'}
+    <div class="sub">평가일 ${META.why_date || ''} · 근거: 네이버 리서치·실적·수급·뉴스</div></div>`;
+}
 const levelTxt = (s, role) => { const l = (s.lines?.levels || []).find(x => x.role === role); return l ? `${CUR}${fmtp(l.price, 2)}` : '–'; };
 // 채널·추세선·지지/저항을 차트 위에 그림 (strategies/chart_lines.py 계산값)
 function drawLines(chart, cs, L) {
@@ -198,7 +212,7 @@ async function show(code) {
       <div class="kv"><span>가까운 저항 / 지지</span><b>${levelTxt(s, '저항')} / ${levelTxt(s, '지지')}</b></div>
       <div class="kv" style="grid-column:1/-1"><span>차트 패턴 (교재 21~23p 기준 자동 인식)</span><b style="font-weight:500;white-space:normal">${patternTxt(s)}</b></div>
       <div class="kv"><span>컨센서스 목표가 (저~고)</span><b>${r.cns_target ? `${CUR}${fmtp(r.cns_target, 0)} (${fmt((r.cns_target / r.close - 1) * 100, 0)}%)` : '–'}<br><span class="sub">${r.cns_target_low ? `${CUR}${fmtp(r.cns_target_low,0)} ~ ${CUR}${fmtp(r.cns_target_high,0)}` : ''}</span></b></div>
-    </div>`;
+    </div>${whyHtml(r)}`;
   makeCharts();
   const t = s.t;
   const cs = pc.addCandlestickSeries({upColor: up, downColor: dn, borderVisible: false, wickUpColor: up, wickDownColor: dn});
