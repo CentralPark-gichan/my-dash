@@ -188,9 +188,10 @@ function autoHtml() {
   const items = [];
   if (a.new_entrants.length) items.push(it('신규 진입', 'new', a.new_entrants.map(chip).join('') + ' <span class="sub">정성 평가 대기</span>'));
   if (a.dropped.length) items.push(it('추세 이탈', '', a.dropped.map(x => x.name).join(', ')));
-  a.new_reports.slice(0, 8).forEach(x => items.push(it('리포트', 'rep', `<a href="${x.url}" target="_blank"><b>${x.name}</b> · ${x.title}</a> <span class="sub">${x.broker} ${x.date}</span>`)));
+  a.new_reports.slice(0, 8).forEach(x => items.push(it(x.broker === 'SEC 8-K' ? '실적 발표' : '리포트', 'rep', `<a href="${x.url}" target="_blank"><b>${x.name}</b> · ${x.title}</a> <span class="sub">${x.broker} ${x.date}</span>`)));
   a.flow_alerts.filter(x => x.type.includes('매도')).forEach(x => items.push(it('동반 매도', 'sell', `${chip(x)} <span class="sub">${x.text}</span>`)));
   const buy = a.flow_alerts.filter(x => x.type.includes('매수'));
+  if (a.industry && a.industry.length) items.push(it('업종 분포', '', a.industry.slice(0, 12).map(x => `<span class="chip" style="cursor:default">${x.industry} <b>${x.n}</b><span class="sub">RS ${x.rs}</span></span>`).join('') + ' <span class="sub">템플릿 8/8 종목 수</span>'));
   if (buy.length) items.push(it('동반 매수', 'buy', buy.map(x => `${chip(x)}<span class="sub" style="margin-right:6px">${x.text.replace('20일 ', '')}</span>`).join('')));
   return `<section class="card"><div class="sec-h"><span class="dot"></span>오늘의 변화 <span class="sub">${a.date} 자동 감지 · 정성 평가 ${a.eval_date}</span></div>
     <div class="tl">${items.join('') || '<div class="sub" style="padding:10px 0">변화 없음</div>'}</div></section>`;
@@ -203,7 +204,7 @@ function renderOverview() {
     const chips = byC[c].sort((a, b) => b.rs - a.rs).map(r => `<span class="chip" data-c="${r.code}" title="${r.why.why}">${r.name}<span class="sub">${r.stage}</span></span>`).join('');
     return `<div class="cc"><div class="t"><span class="rk">${i + 1}</span>${c}<span class="badge ${DUR_CLS(cl.durability || '')}" style="margin-left:auto">지속성 ${cl.durability || '–'}</span></div><div class="ds">${cl.summary || ''}</div><div>${chips}</div></div>`;
   }).join('');
-  $('#overview').innerHTML = `<section class="card"><div class="sec-h"><span class="dot"></span>오늘의 판단 — 어디가 오래 가나 <span class="sub">${META.why_date} · 리포트·실적·수급·뉴스 종합</span></div>
+  $('#overview').innerHTML = `<section class="card"><div class="sec-h"><span class="dot"></span>오늘의 판단 — 어디가 오래 가나 <span class="sub">${META.why_date} · ${META.market === 'US' ? 'SEC 실적 발표·뉴스·컨센서스 종합' : '리포트·실적·수급·뉴스 종합'}</span></div>
     <div class="hl">${o.headline}</div><ul class="pts">${o.points.map(p => `<li>${p}</li>`).join('')}</ul>
     <div class="sec-h" style="padding-top:4px;font-size:14px">산업군 지속성 순위</div><div class="cl">${cards}</div></section>${autoHtml()}`;
   $('#overview').onclick = e => { const ch = e.target.closest('.chip[data-c]'); if (ch) { show(ch.dataset.c); document.querySelector('.detailcard').scrollIntoView({behavior: 'smooth'}); } };
@@ -237,8 +238,8 @@ function whyHtml(r) {
     <div class="grid"><div class="kv"><span>리스크</span><b style="font-weight:500;white-space:normal">${w.risk || '–'}</b></div>
     <div class="kv"><span>확인할 것</span><b style="font-weight:500;white-space:normal">${w.watch || '–'}</b></div>
     <div class="kv" style="grid-column:1/-1"><span>산업 판단 (${w.cluster} · 지속성 ${cl.durability || '–'})</span><b style="font-weight:500;white-space:normal">${cl.summary || ''}</b></div></div>
-    ${reps ? `<ul class="reps">${reps}</ul>` : '<div class="sub">최근 6개월 증권사 리포트 없음</div>'}
-    <div class="sub">평가일 ${META.why_date || ''} · 근거: 네이버 리서치·실적·수급·뉴스</div></div>`;
+    ${reps ? `<ul class="reps">${reps}</ul>` : `<div class="sub">${META.market === 'US' ? '최근 실적 발표문·뉴스 없음' : '최근 6개월 증권사 리포트 없음'}</div>`}
+    <div class="sub">평가일 ${META.why_date || ''} · 근거: ${META.market === 'US' ? 'SEC 실적 발표문·뉴스·컨센서스' : '네이버 리서치·실적·수급·뉴스'}</div></div>`;
 }
 const levelTxt = (s, role) => { const l = (s.lines?.levels || []).find(x => x.role === role); return l ? `${CUR}${fmtp(l.price, 2)}` : '–'; };
 // 채널·추세선·지지/저항을 차트 위에 그림 (strategies/chart_lines.py 계산값)
