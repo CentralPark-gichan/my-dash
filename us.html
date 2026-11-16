@@ -127,6 +127,14 @@ td.nm b{font-size:14px}td.nm .sub{font-size:12px}
 .sflist .row{display:grid;grid-template-columns:minmax(0,1fr) 130px 52px;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
 .sflist .row:hover{background:var(--hover)}.sflist .row.sel{background:var(--sel)}
 #sfchart{height:300px}
+.rmgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;padding:12px 20px 20px}@media (max-width:1050px){.rmgrid{grid-template-columns:1fr}}
+.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;padding:12px 20px 4px}
+.pick{border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;background:var(--panel)}.pick:hover{border-color:var(--acc)}
+.pick b{font-size:14.5px}.pick .sub{display:block;margin-top:4px;line-height:1.55;font-size:12.5px;color:var(--sub)}
+.rmt{width:100%;font-size:12.5px}.rmt td,.rmt th{padding:7px 8px}.rmt tr[data-c]{cursor:pointer}
+.secbar{display:grid;grid-template-columns:minmax(0,1fr) 90px 44px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.secbar .b{height:7px;border-radius:4px;background:var(--acc);opacity:.75}
+.irep{font-size:12.5px;padding:6px 0;border-bottom:1px dashed var(--line);line-height:1.5}.irep a{color:var(--ink);text-decoration:none}.irep a:hover{color:var(--acc)}
 .empty{padding:48px;text-align:center;color:var(--muted)}
 
 /* ---- refined theme ---- */
@@ -213,6 +221,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <div class="view on" id="v-sum">
   <section class="card"><div class="sec-h"><span class="dot"></span>오늘의 시장 <span class="sub">시장 방향(M)</span></div><div id="market"></div></section>
   <div id="overview" style="display:contents"></div>
+  <section class="card" id="rmcard" style="display:none"></section>
   </div>
   <div class="view" id="v-flow">
   <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종·종목 수급 오실레이터 <span class="sub">외국인+기관 20일 순매수 ÷ 업종 시총 · 현재 위치 = 최근 80개(≈4개월) 중 백분위 · P≤25 바텀권(수급 비움) / P≥75 과열권</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button><button data-k="종목">종목</button></div><div class="seg" id="sfbase" style="display:none"><button data-b="1" class="on">외+기 기준</button><button data-b="2">외국인</button><button data-b="3">기관</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div></section>
@@ -398,6 +407,46 @@ function renderOverview() {
   $('#overview').onclick = e => { const ch = e.target.closest('.chip[data-c]'); if (ch) { setView('list'); show(ch.dataset.c); } };
 }
 setTimeout(renderOverview);
+let RM = null, rmTab = 'top';
+async function initReports() {
+  if (META.market !== 'KR') return;
+  try { RM = await (await fetch(`${META.charts}/report_momentum.json`)).json(); } catch (e) { return; }
+  $('#rmcard').style.display = ''; renderRM();
+}
+function goStock(code) {
+  if (DATA.rows.find(r => r.code === code)) { setView('list'); show(code); }
+  else if (typeof FI !== 'undefined' && FI && FI[code]) openStockFlow(code);
+}
+function renderRM() {
+  const b = RM.brief || {}, col = p => p == null ? 'inherit' : p <= 25 ? '#2f6fe0' : p >= 75 ? '#e0343a' : 'inherit';
+  const list = rmTab === 'top' ? RM.stocks.slice(0, 20) : rmTab === 'today' ? RM.stocks.filter(x => x.today).sort((a, b) => b.s5 - a.s5).slice(0, 25) : RM.stocks.slice().sort((a, b) => a.s20 - b.s20).slice(0, 15);
+  const tr = x => `<tr data-c="${x.code}"><td style="text-align:left"><b>${x.name}</b> <span class="sub">${x.industry || ''}</span>${x.in_trend ? '<span class="tg py">추세</span>' : ''}</td>
+    <td><b>${x.s20 > 0 ? '+' : ''}${x.s20}</b> <span class="sub">${x.s5 > 0 ? '+' : ''}${x.s5}</span></td><td>${x.n20}</td>
+    <td><span class="up">${x.beat20}</span>/<span class="down">${x.miss20}</span></td><td><span class="up">${x.tp_up20}</span>/<span class="down">${x.tp_dn20}</span></td>
+    <td class="${sign(x.r1)}">${fmt(x.r1, 1)}%</td><td class="${sign(x.r5)}">${fmt(x.r5, 1)}%</td><td><b style="color:${col(x.flow_p)}">${x.flow_p == null ? '–' : 'P' + fmt(x.flow_p, 0)}</b></td></tr>`;
+  const mx = Math.max(1, ...RM.sectors.slice(0, 12).map(s => Math.abs(s.s20)));
+  $('#rmcard').innerHTML = `<div class="sec-h">리포트 이익 모멘텀 — 수급이 쏠릴 곳 <span class="sub">${RM.date} · 오늘 리포트 ${RM.n_today}건 · 최근 20거래일 기업·산업 리포트 자동 분석${b.date ? ' · 브리핑 ' + b.date : ''}</span></div>
+    ${b.headline ? `<div class="hl">${b.headline}</div>` : ''}
+    ${b.points ? `<details class="ptsbox"><summary>판단 근거 ${b.points.length}개 보기 ▾</summary><ul class="pts">${b.points.map(p => `<li>${p}</li>`).join('')}</ul></details>` : ''}
+    ${b.picks ? `<div class="picks">${b.picks.map(x => `<div class="pick" data-c="${x.code}"><b>${x.name}</b><span class="sub">${x.why}</span></div>`).join('')}</div>` : ''}
+    ${b.sectors ? `<div class="checks" style="padding:8px 20px 0">${b.sectors.map(s => `<span class="badge" title="${s.view}">${s.name}</span>`).join('')}</div>` : ''}
+    <div class="rmgrid"><div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><b>종목별 이익 모멘텀</b><div class="seg" id="rmtab" style="margin-left:auto"><button data-t="top" class="${rmTab === 'top' ? 'on' : ''}">20일 상위</button><button data-t="today" class="${rmTab === 'today' ? 'on' : ''}">오늘 리포트</button><button data-t="low" class="${rmTab === 'low' ? 'on' : ''}">하위(경고)</button></div></div>
+      <div style="overflow:auto"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th title="20일 점수 / 5일 점수">점수</th><th>리포트</th><th title="서프라이즈/쇼크">서프/쇼크</th><th title="목표가 상향/하향">TP↑/↓</th><th>1일</th><th>5일</th><th title="외+기 수급 위치">수급</th></tr></thead><tbody>${list.map(tr).join('')}</tbody></table></div>
+      <div class="sub" style="margin-top:6px">점수 = 목표가 상향 +2/하향 -2, 서프라이즈 +2/쇼크 -2, 사상 최대 +1, 추정치·가이던스 상향 +1/하향 -1 (리포트 본문 자동 판독)</div>
+    </div><div>
+      <b>업종별 이익 모멘텀 (20일)</b>
+      <div style="margin-top:6px">${RM.sectors.slice(0, 12).map(s => `<div class="secbar" title="${s.top.join(', ')}"><div><b>${s.industry}</b> <span class="sub">리포트 ${s.n20} · 5일 ${fmt(s.r5, 1)}%</span></div><div><div class="b" style="width:${Math.max(4, Math.abs(s.s20) / mx * 100)}%;${s.s20 < 0 ? 'background:var(--bad)' : ''}"></div></div><div style="text-align:right"><b>${s.s20 > 0 ? '+' : ''}${s.s20}</b></div></div>`).join('')}</div>
+      <b style="display:block;margin-top:14px">최근 산업 리포트</b>
+      <div>${RM.industry_reports.slice(0, 10).map(r => `<div class="irep"><a href="${r.url}" target="_blank"><span class="sub">${r.date.slice(5)} ${r.sector || ''} · ${r.broker}</span><br>${r.title}</a></div>`).join('')}</div>
+    </div></div>`;
+  $('#rmcard').onclick = e => {
+    const t = e.target.closest('#rmtab button'); if (t) { rmTab = t.dataset.t; renderRM(); return; }
+    const c = e.target.closest('[data-c]'); if (c && !e.target.closest('a')) goStock(c.dataset.c);
+  };
+}
+setTimeout(initReports);
+
 // ---- view switching & detail tabs ----
 let VIEW = 'sum';
 try { VIEW = (location.hash.slice(1) || localStorage.getItem('view') || 'sum'); } catch (e) {}
