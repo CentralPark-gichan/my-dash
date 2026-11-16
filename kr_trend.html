@@ -407,7 +407,7 @@ function renderOverview() {
   $('#overview').onclick = e => { const ch = e.target.closest('.chip[data-c]'); if (ch) { setView('list'); show(ch.dataset.c); } };
 }
 setTimeout(renderOverview);
-let RM = null, rmTab = 'top';
+let RM = null, rmTab = 'a';
 async function initReports() {
   if (META.market !== 'KR') return;
   try { RM = await (await fetch(`${META.charts}/report_momentum.json`)).json(); } catch (e) { return; }
@@ -419,9 +419,10 @@ function goStock(code) {
 }
 function renderRM() {
   const b = RM.brief || {}, col = p => p == null ? 'inherit' : p <= 25 ? '#2f6fe0' : p >= 75 ? '#e0343a' : 'inherit';
-  const list = rmTab === 'top' ? RM.stocks.slice(0, 20) : rmTab === 'today' ? RM.stocks.filter(x => x.today).sort((a, b) => b.s5 - a.s5).slice(0, 25) : RM.stocks.slice().sort((a, b) => a.s20 - b.s20).slice(0, 15);
-  const tr = x => `<tr data-c="${x.code}"><td style="text-align:left"><b>${x.name}</b> <span class="sub">${x.industry || ''}</span>${x.in_trend ? '<span class="tg py">추세</span>' : ''}</td>
-    <td><b>${x.s20 > 0 ? '+' : ''}${x.s20}</b> <span class="sub">${x.s5 > 0 ? '+' : ''}${x.s5}</span></td><td>${x.n20}</td>
+  const GR = {A: ['#e0343a', 'A 매수후보'], B: ['#4f46e5', 'B 관찰'], '경고': ['#2f6fe0', '경고'], C: ['#9aa0aa', 'C']};
+  const list = rmTab === 'a' ? RM.stocks.filter(x => x.grade === 'A') : rmTab === 'top' ? RM.stocks.slice(0, 20) : rmTab === 'today' ? RM.stocks.filter(x => x.today).sort((a, b) => b.v20 - a.v20 || b.s5 - a.s5).slice(0, 25) : RM.stocks.filter(x => x.grade === '경고').slice(0, 20);
+  const tr = x => `<tr data-c="${x.code}"><td style="text-align:left"><span class="tg" style="color:${GR[x.grade][0]};border-color:${GR[x.grade][0]}">${GR[x.grade][1]}</span> <b>${x.name}</b> <span class="sub">${x.industry || ''}</span>${x.in_trend || x.stack ? '<span class="tg py">추세</span>' : ''}${x.react_good ? '<span class="tg" title="서프 리포트에 당일 +3% 이상 반응">반응↑</span>' : ''}</td>
+    <td><b>${x.v20 > 0 ? '+' : ''}${x.v20}</b> <span class="sub">원${x.s20 > 0 ? '+' : ''}${x.s20}</span></td><td>${x.n20}</td>
     <td><span class="up">${x.beat20}</span>/<span class="down">${x.miss20}</span></td><td><span class="up">${x.tp_up20}</span>/<span class="down">${x.tp_dn20}</span></td>
     <td class="${sign(x.r1)}">${fmt(x.r1, 1)}%</td><td class="${sign(x.r5)}">${fmt(x.r5, 1)}%</td><td><b style="color:${col(x.flow_p)}">${x.flow_p == null ? '–' : 'P' + fmt(x.flow_p, 0)}</b></td></tr>`;
   const mx = Math.max(1, ...RM.sectors.slice(0, 12).map(s => Math.abs(s.s20)));
@@ -431,9 +432,9 @@ function renderRM() {
     ${b.picks ? `<div class="picks">${b.picks.map(x => `<div class="pick" data-c="${x.code}"><b>${x.name}</b><span class="sub">${x.why}</span></div>`).join('')}</div>` : ''}
     ${b.sectors ? `<div class="checks" style="padding:8px 20px 0">${b.sectors.map(s => `<span class="badge" title="${s.view}">${s.name}</span>`).join('')}</div>` : ''}
     <div class="rmgrid"><div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><b>종목별 이익 모멘텀</b><div class="seg" id="rmtab" style="margin-left:auto"><button data-t="top" class="${rmTab === 'top' ? 'on' : ''}">20일 상위</button><button data-t="today" class="${rmTab === 'today' ? 'on' : ''}">오늘 리포트</button><button data-t="low" class="${rmTab === 'low' ? 'on' : ''}">하위(경고)</button></div></div>
-      <div style="overflow:auto"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th title="20일 점수 / 5일 점수">점수</th><th>리포트</th><th title="서프라이즈/쇼크">서프/쇼크</th><th title="목표가 상향/하향">TP↑/↓</th><th>1일</th><th>5일</th><th title="외+기 수급 위치">수급</th></tr></thead><tbody>${list.map(tr).join('')}</tbody></table></div>
-      <div class="sub" style="margin-top:6px">점수 = 목표가 상향 +2/하향 -2, 서프라이즈 +2/쇼크 -2, 사상 최대 +1, 추정치·가이던스 상향 +1/하향 -1 (리포트 본문 자동 판독)</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><b>종목별 이익 모멘텀</b><div class="seg" id="rmtab" style="margin-left:auto"><button data-t="a" class="${rmTab === 'a' ? 'on' : ''}">A 매수후보</button><button data-t="top" class="${rmTab === 'top' ? 'on' : ''}">검증점수 상위</button><button data-t="today" class="${rmTab === 'today' ? 'on' : ''}">오늘 리포트</button><button data-t="low" class="${rmTab === 'low' ? 'on' : ''}">경고</button></div></div>
+      <div style="overflow:auto"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th title="검증점수 v20 / 원점수 s20">검증점수</th><th>리포트</th><th title="서프라이즈/쇼크">서프/쇼크</th><th title="목표가 상향/하향">TP↑/↓</th><th>1일</th><th>5일</th><th title="외+기 수급 위치">수급</th></tr></thead><tbody>${list.map(tr).join('')}</tbody></table></div>
+      <div class="sub" style="margin-top:6px">검증점수(백테스트 10개월·5,015건 기준) = 서프 +2, 추정치 상향 +2, 목표가 상향 +1, 서프+목표가 상향 동시 +3 · 좋은 리포트에 당일 -3% 이하 반응 시 -2 · 부정 리포트는 이미 가격 반영돼 0점. A = 추세(정배열) + 검증점수 ≥2 → 20일 시장대비 평균 +9%, 승률 57% (비추세는 +1%)</div>
     </div><div>
       <b>업종별 이익 모멘텀 (20일)</b>
       <div style="margin-top:6px">${RM.sectors.slice(0, 12).map(s => `<div class="secbar" title="${s.top.join(', ')}"><div><b>${s.industry}</b> <span class="sub">리포트 ${s.n20} · 5일 ${fmt(s.r5, 1)}%</span></div><div><div class="b" style="width:${Math.max(4, Math.abs(s.s20) / mx * 100)}%;${s.s20 < 0 ? 'background:var(--bad)' : ''}"></div></div><div style="text-align:right"><b>${s.s20 > 0 ? '+' : ''}${s.s20}</b></div></div>`).join('')}</div>
