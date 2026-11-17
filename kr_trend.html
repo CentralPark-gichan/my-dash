@@ -467,10 +467,10 @@ function goIndustry(name) {  // 업종 클릭 → '수급' 화면으로 이동: 
   $('#sfzone').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.z === 'all'));
   $('#sfbase').style.display = 'none';
   setView('flow');
-  if (SF && SF[key]) { sfSel = key; renderSF(); drawSF(); const s = $('#sflist .row.sel'); if (s) s.scrollIntoView({block: 'nearest'}); }
+  if (SF && SF[key]) { sfSel = key; renderSF(); drawSF(); const s = $('#sflist .row.sel'), L = $('#sflist'); if (s) L.scrollTop = s.offsetTop - L.offsetTop - 8; }
   else { renderSF(); drawIndIdx(name); }
   fillInd(name);
-  setTimeout(() => { const t = $('#sftitle'), y = t.getBoundingClientRect().top + scrollY - 70; scrollTo({top: y, behavior: 'smooth'}); }, 50);  // 차트 제목으로 바로 이동
+  setTimeout(() => { const t = $('#sftitle'), y = t.getBoundingClientRect().top + scrollY - 70; scrollTo({top: Math.max(0, y)}); }, 120);  // 차트 제목으로 바로 이동
 }
 function fillInd(name) {
   const d = IND && IND.industries.find(x => x.industry === name);
