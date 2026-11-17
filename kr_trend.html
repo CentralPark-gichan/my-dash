@@ -221,6 +221,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <div class="pagehead"><h1 id="ttl">미국 추세·눌림목</h1><div class="vtabs" id="vtabs"><button data-v="sum" class="on">오늘의 판단</button><button data-v="list">종목</button><button data-v="flow" id="vtFlow">수급</button></div><div class="mstrip" id="mstrip"></div></div>
   <div class="view on" id="v-sum">
   <section class="card"><div class="sec-h"><span class="dot"></span>오늘의 시장 <span class="sub">시장 방향(M)</span></div><div id="market"></div></section>
+  <section class="card" id="regcard" style="display:none"></section>
   <section class="card" id="indcard" style="display:none"></section>
   <section class="card" id="rmcard" style="display:none"></section>
   <div id="overview" style="display:contents"></div>
@@ -364,7 +365,7 @@ function render() {
     <td style="text-align:left">${r.ind_regime ? (c => `<span class="tg" style="color:${c};border-color:${c}" title="${r.industry} 업종 — 추세 T ${fmt(r.ind_T, 0)} / 이익 E ${fmt(r.ind_E, 0)} / 정배열 폭 ${fmt(r.ind_br, 0)}%${r.ind_decel ? ' · 이익 증가율 둔화' : ''}">${r.ind_regime}</span> <span class="sub">${fmt(r.ind_T, 0)}/${fmt(r.ind_E, 0)}</span>`)({'주도': '#e0343a', '이익 선행': '#c98500', '추세만': '#4f46e5', '소외': '#9aa0aa'}[r.ind_regime]) : '<span class="sub">–</span>'}</td>
     <td style="text-align:left"><span class="st ${ST_CLS(r.stage)}">${r.stage}</span></td>
     <td>${fmtp(r.close, 2)}</td><td class="${sign(r.pct)}">${fmt(r.pct, 2)}%</td>
-    <td><b>${fmt(r.rs, 0)}</b></td><td title="${r.rsx ? `Mansfield RS ${fmt(r.rsx.mrs, 1)} (0 위 = ${r.rsx.bm}보다 강함) · RS 등급(12-1) ${r.rsx.rating ?? '–'} · 지수대비 1개월 ${fmt(r.rsx.x21, 1)}% / 3개월 ${fmt(r.rsx.x63, 1)}% / 12개월 ${fmt(r.rsx.x252, 1)}%${r.rsx.rs_hi ? ' · RS 라인 52주 신고가' : ''}` : ''}">${r.rsx ? `<b style="color:${r.rsx.mrs > 0 ? 'var(--up)' : 'var(--down)'}">${r.rsx.mrs > 0 ? '+' : ''}${fmt(r.rsx.mrs, 0)}</b>${r.rsx.rs_hi ? ' <span class="tg py" title="RS 라인 52주 신고가">RS高</span>' : ''}` : '–'}</td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td><td title="외국인 수급 위치 P (기관 P${fmt(r.pct_o, 0)}) · 4개월 누적 포지션 ${fmt(r.pos_f, 0)}">${r.pct_f == null ? '–' : `<b style="color:${r.pct_f <= 25 ? '#2f6fe0' : r.pct_f >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.pct_f, 0)}</b>`}</td><td title="${r.etf ? `ETF 보유율 ${fmt(r.etf.etf_own, 2)}% · ${r.etf.n_etf}개 ETF(액티브 ${r.etf.n_active}) · 1개월 순유입 ${fmt(r.etf.f1m, 1)}bp` : 'ETF 미편입'}">${r.etf ? `<b style="color:${r.etf.score >= 75 ? '#e0343a' : r.etf.score <= 25 ? '#2f6fe0' : 'inherit'}">${fmt(r.etf.score, 0)}</b> <span class="sub">${r.etf.n_active ? 'A' + r.etf.n_active : ''}</span>` : '–'}</td>
+    <td><b>${fmt(r.rs, 0)}</b></td><td title="${r.rsx ? `Mansfield RS ${fmt(r.rsx.mrs, 1)} (0 위 = ${r.rsx.bm}보다 강함) · RS 등급(12-1) ${r.rsx.rating ?? '–'} · 지수대비 1개월 ${fmt(r.rsx.x21, 1)}% / 3개월 ${fmt(r.rsx.x63, 1)}% / 12개월 ${fmt(r.rsx.x252, 1)}%${r.rsx.rs_hi ? ' · RS 라인 52주 신고가' : ''}` : ''}">${r.rsx ? `<b style="color:${r.rsx.mrs > 0 ? 'var(--up)' : 'var(--down)'}">${r.rsx.mrs > 0 ? '+' : ''}${fmt(r.rsx.mrs, 0)}</b>${r.rsx.rs_hi ? ' <span class="tg py" title="RS 라인 52주 신고가">RS高</span>' : ''}` : '–'}</td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td><td title="외국인 수급 위치 P (기관 P${fmt(r.pct_o, 0)}) · 4개월 누적 포지션 ${fmt(r.pos_f, 0)}">${r.pct_f == null ? (r.uflow_p != null ? `<b title="미국 수급 오실레이터 252일 퍼센타일(가격·거래량 기반)" style="color:${r.uflow_p <= 25 ? '#2f6fe0' : r.uflow_p >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.uflow_p, 0)}</b>` : '–') : `<b style="color:${r.pct_f <= 25 ? '#2f6fe0' : r.pct_f >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.pct_f, 0)}</b>`}</td><td title="${r.etf ? `ETF 보유율 ${fmt(r.etf.etf_own, 2)}% · ${r.etf.n_etf}개 ETF(액티브 ${r.etf.n_active}) · 1개월 순유입 ${fmt(r.etf.f1m, 1)}bp` : 'ETF 미편입'}">${r.etf ? `<b style="color:${r.etf.score >= 75 ? '#e0343a' : r.etf.score <= 25 ? '#2f6fe0' : 'inherit'}">${fmt(r.etf.score, 0)}</b> <span class="sub">${r.etf.n_active ? 'A' + r.etf.n_active : ''}</span>` : '–'}</td>
     <td class="xc">${fmt(r.retrace_pct, 0)}</td><td class="xc">${fmt(r.vol_ratio_5_50, 2)}</td><td class="xc">${fmt(r.rsi, 0)}</td>
     <td class="xc">${r.weinstein}</td><td class="xc">${r.template_score}/8</td><td class="xc">${fmt(r.mktcap_b, 1)}</td><td class="xc">${r.industry || ''}</td></tr>`).join('')
     || `<tr><td colspan="20" class="empty">조건에 맞는 종목이 없습니다</td></tr>`;
@@ -555,6 +556,39 @@ function renderInd() {
   };
 }
 setTimeout(initIndustry);
+// ── 시장 국면·투자 비중 (research/market_regime.py — 태린이아빠 국장 V2.4 규칙) ──
+let REG = null;
+async function initRegime() {
+  if (META.market !== 'KR') return;
+  try { REG = await (await fetch(`${META.charts}/market_regime.json`)).json(); } catch (e) { return; }
+  const R = REG, col = {'추세': '#e0343a', '비추세': '#c98500', '회복': '#4f46e5', '역추세': '#2f6fe0'}[R.regime] || 'var(--ink)';
+  const W = Object.entries(R.weights || {}).map(([n, w]) => `${n} ${Math.round(w * 100)}%`).join(' · ') || '현금 100%';
+  const guide = {'추세': '업종 Breadth 60% 이상 — 주도 업종 Top3에 100%. 우리 추세 종목 매수도 정상 비중', '비추세': '업종 Breadth 40~60% — 주도 업종 Top3의 상대모멘텀 강도에 따라 25~100%. 추세 종목은 선별·비중 축소',
+    '회복': '업종 Breadth 30~40% — 직전 6개월 주도 업종 중 5~15% 눌린 업종만 총 50%. 신규 추세 매수는 소액', '역추세': '업종 Breadth 30% 미만 — 개별 업종·종목 대신 KOSPI 낙폭 비례 매수(−12% 50%, −18% 75%, −24% 100%). 추세 종목 신규 매수 보류'}[R.regime];
+  $('#regcard').style.display = '';
+  $('#regcard').innerHTML = `<div class="sec-h">시장 국면 · 투자 비중 <span class="sub">${R.date} · 태린이아빠 국장 V2.4 규칙을 우리 업종지수 66개에 적용 · 월말 리밸런싱 기준</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="sub">국면</div><b style="font-size:22px;color:${col}">${R.regime}</b></div>
+      <div class="kpi"><div class="sub">업종 Breadth (120일선 위)</div><b style="font-size:22px">${fmt(R.breadth * 100, 0)}%</b></div>
+      <div class="kpi"><div class="sub">권장 주식 비중</div><b style="font-size:22px">${fmt(R.exposure * 100, 0)}%</b><div class="sub">${W}</div></div>
+      <div class="kpi"><div class="sub">KOSPI 252일 고점 대비</div><b style="font-size:22px" class="${R.dd < 0 ? 'down' : 'up'}">${fmt(R.dd * 100, 1)}%</b><div class="sub">MA200 ${R.kospi_above200 ? '위' : '아래'} · 6M ${fmt(R.kospi_mom6 * 100, 1)}%</div></div>
+      <div class="kpi"><div class="sub">KOSPI Fear &amp; Greed (가격 기반)</div><b style="font-size:22px">${fmt(R.fg, 0)}</b><div class="sub">히스토그램 ${R.hist > 0 ? '+' : ''}${fmt(R.hist, 2)}${R.fg_rebound ? ' · 과매도 반등 신호' : ''}</div></div>
+    </div>
+    <div class="sub" style="padding:0 20px 8px;line-height:1.7"><b>${R.regime}</b>: ${guide}<br>
+      V2.4 업종 점수 상위: ${(R.top || []).slice(0, 6).map(([n, s]) => `${n} ${s > 0 ? '+' : ''}${s}`).join(' · ') || '적격 업종 없음(120일선 위 & 6M 상대모멘텀>0)'}<br>
+      백테스트(2024-02~, 업종지수 근사): 누적 +339% vs KOSPI +99%, MDD −37.6% vs −45.5%, 샤프 1.54 vs 0.86 · 단, 역추세 KOSPI 매수는 2026년 9~10월 −16%·−13%(떨어지는 칼) — 분할로</div>
+    <div id="regchart" style="height:200px;margin:0 16px 16px"></div>`;
+  const ch = LightweightCharts.createChart($('#regchart'), {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
+    grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, autoSize: true, leftPriceScale: {visible: true, borderVisible: false}, rightPriceScale: {borderVisible: false}});
+  const tt = R.t.map(x => `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6, 8)}`);
+  ch.addLineSeries({color: css('--ink'), lineWidth: 2, priceScaleId: 'left', priceLineVisible: false, title: 'KOSPI'}).setData(tt.map((t, i) => R.kospi_s[i] == null ? null : {time: t, value: R.kospi_s[i]}).filter(Boolean));
+  const b = ch.addLineSeries({color: '#e0343a', lineWidth: 2, priceScaleId: 'right', priceLineVisible: false, title: 'Breadth %'});
+  b.setData(tt.map((t, i) => R.breadth_s[i] == null ? null : {time: t, value: R.breadth_s[i]}).filter(Boolean));
+  ch.addLineSeries({color: '#4f46e5', lineWidth: 1.5, priceScaleId: 'right', priceLineVisible: false, title: 'F&G'}).setData(tt.map((t, i) => R.fg_s[i] == null ? null : {time: t, value: R.fg_s[i]}).filter(Boolean));
+  [[60, '추세'], [40, '비추세'], [30, '역추세']].forEach(([v, t]) => b.createPriceLine({price: v, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: t}));
+  ch.timeScale().fitContent();
+}
+setTimeout(initRegime);
 
 // ---- view switching & detail tabs ----
 let VIEW = 'sum';
@@ -695,7 +729,8 @@ function drawFlow(s, base) {
     l.setData(s.t.map((d, i) => vals[i] == null ? null : {time: d, value: vals[i]}).filter(Boolean)); return l; };
   if (s.ts) {  // 태린이아빠 수급오실레이터 히스토그램 (외+기, bp)
     const hs = fc.addHistogramSeries({priceLineVisible: false, lastValueVisible: true, priceFormat: {type: 'price', precision: 2, minMove: 0.01}});
-    hs.setData(s.t.map((d, i) => s.ts[i] == null ? null : {time: d, value: s.ts[i] * 1e4, color: s.ts[i] >= 0 ? '#e0343a' : '#2f6fe0'}).filter(Boolean));
+    const k = s.us_flow ? 1 : 1e4;
+    hs.setData(s.t.map((d, i) => s.ts[i] == null ? null : {time: d, value: s.ts[i] * k, color: s.ts[i] >= 0 ? '#e0343a' : '#2f6fe0'}).filter(Boolean));
   } else {
     const lf = mk(s.pf, '#e0343a', 2); mk(s.po, '#2f6fe0', 1.5);
     [[75, '과열권'], [25, '바텀권']].forEach(([v, t]) => lf.createPriceLine({price: v, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: t}));
@@ -703,7 +738,7 @@ function drawFlow(s, base) {
   }
   [pc, rc].forEach(ch => ch.timeScale().subscribeVisibleLogicalRangeChange(r => r && fc && fc.timeScale().setVisibleLogicalRange(r)));
   const qn = s.qs ? s.qs[s.qs.length - 1] : null;
-  $('#flowleg').innerHTML = `수급오실레이터(외+기) = (5일 순매수÷시총)의 MACD(12,26,9) 히스토그램 · <b style="color:#e0343a">▮ 매수 우위</b> / <b style="color:#2f6fe0">▮ 매도 우위</b>${qn != null ? ` · 현재 수급 위치 <b>P${fmt(qn, 0)}</b> (60일)` : ''}`;
+  $('#flowleg').innerHTML = (s.us_flow ? `수급 오실레이터(미국, 가격·거래량 기반) = (장중 위치 60% + 등락 40%) × 회전율의 5일 합 → MACD(12,26,10) 히스토그램` : `수급오실레이터(외+기) = (5일 순매수÷시총)의 MACD(12,26,9) 히스토그램`) + ` · <b style="color:#e0343a">▮ 매수 우위</b> / <b style="color:#2f6fe0">▮ 매도 우위</b>${qn != null ? ` · 현재 수급 위치 <b>P${fmt(qn, 0)}</b> (${s.us_flow ? 252 : 60}일)` : ''}`;
 }
 const sma = (c, n) => c.map((_, i) => i < n - 1 ? null : c.slice(i - n + 1, i + 1).reduce((a, b) => a + b, 0) / n);
 const ema = (c, n) => { const k = 2 / (n + 1); let e = c[0]; return c.map((x, i) => (e = i ? x * k + e * (1 - k) : x)); };
