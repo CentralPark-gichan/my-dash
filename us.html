@@ -226,7 +226,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <div id="overview" style="display:contents"></div>
   </div>
   <div class="view" id="v-flow">
-  <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종·종목 수급 오실레이터 <span class="sub">외국인+기관 20일 순매수 ÷ 업종 시총 · 현재 위치 = 최근 80개(≈4개월) 중 백분위 · P≤25 바텀권(수급 비움) / P≥75 과열권</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button><button data-k="종목">종목</button></div><div class="seg" id="sfbase" style="display:none"><button data-b="1" class="on">외+기 기준</button><button data-b="2">외국인</button><button data-b="3">기관</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div></section>
+  <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종·종목 수급 오실레이터 <span class="sub">외국인+기관 20일 순매수 ÷ 업종 시총 · 현재 위치 = 최근 80개(≈4개월) 중 백분위 · P≤25 바텀권(수급 비움) / P≥75 과열권</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button><button data-k="종목">종목</button></div><div class="seg" id="sfbase" style="display:none"><button data-b="1" class="on">외+기 기준</button><button data-b="2">외국인</button><button data-b="3">기관</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div><div id="sfind"></div></section>
   </div>
   <div class="view" id="v-list">
   <main>
@@ -459,9 +459,33 @@ async function initIndustry() {
   $('#indcard').style.display = ''; renderInd();
 }
 let indSel = null;
-function goIndustry(name) {  // 업종 클릭 → 카드 안에 그 업종 구성종목 패널 (추세 목록에 없는 업종도 표시)
-  indSel = indSel === name ? null : name; renderInd();
-  const p = $('#indpanel'); if (p) p.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+function goIndustry(name) {  // 업종 클릭 → '수급' 화면으로 이동: 업종 차트(시총+수급 오실레이터) + 아래에 구성종목 표
+  indSel = name;
+  const key = `[업종] ${name}`;
+  sfKind = '업종'; sfZone = 'all'; $('#sfq').value = '';
+  $('#sfkind').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === '업종'));
+  $('#sfzone').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.z === 'all'));
+  $('#sfbase').style.display = 'none';
+  setView('flow');
+  if (SF && SF[key]) { sfSel = key; renderSF(); drawSF(); const s = $('#sflist .row.sel'); if (s) s.scrollIntoView({block: 'nearest'}); }
+  else { renderSF(); drawIndIdx(name); }
+  fillInd(name);
+  $('#sfcard').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+function fillInd(name) {
+  const d = IND && IND.industries.find(x => x.industry === name);
+  $('#sfind').innerHTML = d ? indPanel(d) : '';
+}
+function drawIndIdx(name) {  // 수급 데이터가 없는 업종: 업종 지수(시총가중)만 그림
+  const d = IND.industries.find(x => x.industry === name); if (!d) return;
+  $('#sftitle').innerHTML = `[업종] ${name} <span class="sub">업종 지수(구성종목 시총가중, 1년) · 수급 오실레이터 데이터 없음</span>`;
+  $('#sfzbar').innerHTML = ''; $('#sfmem').textContent = '';
+  $('#sfchart').innerHTML = '';
+  sfc = LightweightCharts.createChart($('#sfchart'), {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
+    grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, autoSize: true, crosshair: {mode: 0}, rightPriceScale: {borderVisible: false}});
+  const t = IND.t.slice(-d.idx.length).map(x => `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6, 8)}`);
+  sfc.addLineSeries({color: css('--ink'), lineWidth: 2, priceLineVisible: false, title: '업종 지수'}).setData(d.idx.map((v, i) => ({time: t[i], value: v})));
+  sfc.timeScale().fitContent();
 }
 function indListFilter(name) {  // 추세 목록에서 이 업종만
   setView('list');
@@ -479,10 +503,10 @@ function indPanel(d) {
   const inList = new Set(DATA.rows.map(r => r.code)), hasOpt = $('#ind') && [...$('#ind').options].some(o => o.value === d.industry);
   const pc = v => v == null ? '–' : `<span class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${v > 0 ? '+' : ''}${fmt(v, 1)}%</span>`;
   const GC = {A: '#e0343a', B: '#4f46e5', '경고': '#2f6fe0', C: '#9aa0aa'};
-  return `<div id="indpanel" style="margin:0 20px 14px;border:1px solid ${RG[d.regime]};border-radius:14px;padding:12px 14px">
+  return `<div id="indpanel" style="margin:4px 18px 16px;border:1px solid ${RG[d.regime]};border-radius:14px;padding:12px 14px">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tg" style="color:${RG[d.regime]};border-color:${RG[d.regime]}">${d.regime}</span><b style="font-size:15px">${d.industry}</b>
       <span class="sub">T ${fmt(d.T, 0)} / E ${fmt(d.E, 0)} · 정배열 ${fmt(d.br_stack, 0)}% · 영업이익 YoY ${d.op_yoy == null ? '–' : fmt(d.op_yoy, 0) + '%'} → 컨센 ${d.op_yoy_cns == null ? '–' : fmt(d.op_yoy_cns, 0) + '%'} · 시총 상위 ${d.members.length}종목</span>
-      <span style="margin-left:auto;display:flex;gap:6px">${hasOpt ? `<button class="btn" onclick="indListFilter('${d.industry}')">추세 목록에서 보기</button>` : '<span class="sub">추세 목록에 이 업종 종목 없음</span>'}<button class="btn" onclick="goIndustry('${d.industry}')">닫기 ✕</button></span></div>
+      <span style="margin-left:auto;display:flex;gap:6px">${hasOpt ? `<button class="btn" onclick="indListFilter('${d.industry}')">추세 목록에서 보기</button>` : '<span class="sub">추세 목록에 이 업종 종목 없음</span>'}<button class="btn" onclick="setView('sum');$('#indcard').scrollIntoView({block:'start'})">← 업종 판정표</button></span></div>
     <div style="overflow:auto;margin-top:8px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>시총</th><th title="정배열 / 템플릿 8/8">추세</th><th>20일</th><th>60일</th><th title="최근 분기 영업이익 YoY">영업이익</th><th title="리포트 검증점수 등급 (v20)">리포트</th><th></th></tr></thead><tbody>
     ${d.members.map(m => `<tr data-mc="${m.code}"><td style="text-align:left"><b>${m.name}</b> <span class="sub">${m.code}</span></td><td>${fmt(m.cap_jo, 1)}조</td>
       <td>${m.tmpl ? '<span class="tg py">8/8</span>' : m.stack ? '<span class="tg">정배열</span>' : '<span class="sub">–</span>'}</td><td>${pc(m.r20)}</td><td>${pc(m.r60)}</td><td>${pc(m.op_yoy)}</td>
@@ -521,7 +545,6 @@ function renderInd() {
       <b style="color:#9aa0aa">소외</b> 업종 역풍 → 개별 추세 종목도 실패 확률이 높음<br>
       T = RS 35% + 정배열 종목 비율 35% + 업종지수 정배열 30% · E = 영업이익 YoY 30% + 다음 분기 컨센 YoY 30% + 리포트 검증점수 40% · 점을 누르면 그 업종 종목 목록으로</div></div>
     <div style="display:flex;align-items:center;gap:10px;padding:0 20px 6px"><b>업종 판정표</b><div class="seg" id="indtab" style="margin-left:auto">${['top', '주도', '이익 선행', '추세만', '소외'].map(k => `<button data-t="${k}" class="${indTab === k ? 'on' : ''}">${k === 'top' ? 'T+E 상위' : k}</button>`).join('')}</div></div>
-    ${indSel && L.find(d => d.industry === indSel) ? indPanel(L.find(d => d.industry === indSel)) : ''}
     <div style="overflow:auto;padding:0 20px 18px"><table class="rmt"><thead><tr><th style="text-align:left">업종</th><th title="추세 점수">T</th><th title="이익 점수">E</th><th title="업종지수 3·6개월 수익 백분위">RS</th><th title="구성종목 중 정배열 비율 (20일 전 대비)">정배열 폭</th><th title="업종지수 정배열 점수(100 = 완전 정배열)">지수</th><th title="최근 실적 분기 영업이익 합 YoY → 다음 분기 컨센서스 YoY">영업이익 YoY</th><th title="리포트 검증점수(v20) 종목당 평균">리포트</th><th title="업종 외+기 수급 위치">수급</th><th>20일</th><th style="text-align:left">정배열 종목</th></tr></thead><tbody>${list.map(tr).join('')}</tbody></table></div>`;
   $('#indcard').onclick = e => {
     const t = e.target.closest('#indtab button'); if (t) { indTab = t.dataset.t; renderInd(); return; }
@@ -559,9 +582,10 @@ async function initSector() {
   try { FI = await (await fetch(`${META.charts}/flow_index.json`)).json(); } catch (e) { FI = {}; }
   $('#sfcard').style.display = '';
   const seg = (id, key, fn) => $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); fn(b.dataset[key]); renderSF(); };
-  seg('#sfkind', 'k', v => { sfKind = v; sfSel = null; $('#sfbase').style.display = v === '종목' ? '' : 'none'; }); seg('#sfzone', 'z', v => sfZone = v); seg('#sfbase', 'b', v => sfBase = +v);
+  seg('#sfkind', 'k', v => { sfKind = v; sfSel = null; $('#sfind').innerHTML = ''; $('#sfbase').style.display = v === '종목' ? '' : 'none'; }); seg('#sfzone', 'z', v => sfZone = v); seg('#sfbase', 'b', v => sfBase = +v);
   $('#sfq').oninput = renderSF;
-  $('#sflist').onclick = e => { const r = e.target.closest('.row'); if (r) { sfSel = r.dataset.g; renderSF(); drawSF(); } };
+  $('#sflist').onclick = e => { const r = e.target.closest('.row'); if (r) { sfSel = r.dataset.g; renderSF(); drawSF(); if (sfKind === '업종') fillInd(sfSel.replace(/^\[.*?\] /, '')); else $('#sfind').innerHTML = ''; } };
+  $('#sfind').onclick = e => { if (e.target.closest('button')) return; const m = e.target.closest('[data-mc]'); if (m) openMember(m.dataset.mc); };
   renderSF();
 }
 function renderSF() {
