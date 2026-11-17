@@ -222,6 +222,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <div class="view on" id="v-sum">
   <section class="card"><div class="sec-h"><span class="dot"></span>오늘의 시장 <span class="sub">시장 방향(M)</span></div><div id="market"></div></section>
   <section class="card" id="regcard" style="display:none"></section>
+  <section class="card" id="optcard" style="display:none"></section>
   <section class="card" id="indcard" style="display:none"></section>
   <section class="card" id="rmcard" style="display:none"></section>
   <div id="overview" style="display:contents"></div>
@@ -589,6 +590,33 @@ async function initRegime() {
   ch.timeScale().fitContent();
 }
 setTimeout(initRegime);
+// ── 외국인 KOSPI200 옵션(월물) 포지션 (research/foreign_options.py, KRX 투자자별 거래실적) ──
+async function initOpt() {
+  if (META.market !== 'KR') return;
+  let O; try { O = await (await fetch(`${META.charts}/foreign_options.json`)).json(); } catch (e) { return; }
+  const up = O.D_amt > 0, col = up ? '#e0343a' : '#2f6fe0';
+  const exp = O.cycle_exp === 'next' ? '다음 만기(12월 둘째 목)' : O.cycle_exp;
+  const hedge = O.fut_qty > 0 && O.D_amt < 0 ? ' · 선물은 순매수(+)인데 풋 매수 → 현물·선물 롱의 하방 헤지 성격일 수 있음' : O.fut_qty < 0 && O.D_amt > 0 ? ' · 선물 순매도 + 콜 매수 → 헤지 성격' : '';
+  $('#optcard').style.display = '';
+  $('#optcard').innerHTML = `<div class="sec-h">외국인 옵션 포지션 (코스피200 월물) <span class="sub">${O.date} · 현재 월물 ${O.days}거래일째 · 월물 안 누적 순매수 (KRX 투자자별 거래실적)</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="sub">외국인 방향</div><b style="font-size:22px;color:${col}">${O.view}</b><div class="sub">콜−풋 순매수 ${O.D_amt > 0 ? '+' : ''}${O.D_amt.toLocaleString()}억 · 2022년 이후 하위 ${fmt(O.D_pct, 0)}%</div></div>
+      <div class="kpi"><div class="sub">콜 순매수</div><b style="font-size:20px">${O.call_amt.toLocaleString()}억</b><div class="sub">${O.call_qty.toLocaleString()}계약</div></div>
+      <div class="kpi"><div class="sub">풋 순매수</div><b style="font-size:20px">${O.put_amt.toLocaleString()}억</b><div class="sub">${O.put_qty.toLocaleString()}계약</div></div>
+      <div class="kpi"><div class="sub">선물 순매수 (참고)</div><b style="font-size:20px" class="${O.fut_qty > 0 ? 'up' : 'down'}">${O.fut_qty == null ? '–' : (O.fut_qty > 0 ? '+' : '') + O.fut_qty.toLocaleString() + '계약'}</b><div class="sub">월물 중 코스피 ${O.kospi_cycle > 0 ? '+' : ''}${fmt(O.kospi_cycle, 1)}%</div></div>
+    </div>
+    <div class="sub" style="padding:0 20px 8px;line-height:1.7">＋ = 상방(콜 매수·풋 매도), − = 하방(풋 매수·콜 매도)${hedge}<br>
+      검증(2022~, 60개 월물): 옵션 대금 방향은 코스피 예측력 거의 없음(20일 순위상관 −0.02), 계약수 방향은 약한 양(+0.10). 월물 첫 5일 하방 시작 → 이후 코스피 +1.6% vs 상방 시작 +0.0% — 외국인 풋 매수는 '하락 베팅'보다 헤지인 경우가 많음. 단독 근거로 쓰지 말고 시장 국면·Breadth와 함께</div>
+    <div id="optchart" style="height:200px;margin:0 16px 16px"></div>`;
+  const ch = LightweightCharts.createChart($('#optchart'), {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
+    grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, autoSize: true, leftPriceScale: {visible: true, borderVisible: false}, rightPriceScale: {borderVisible: false}});
+  const tt = O.t.map(x => `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6, 8)}`);
+  ch.addLineSeries({color: css('--ink'), lineWidth: 2, priceScaleId: 'left', priceLineVisible: false, title: 'KOSPI'}).setData(tt.map((t, i) => ({time: t, value: O.k[i]})));
+  const hs = ch.addHistogramSeries({priceScaleId: 'right', priceLineVisible: false, title: '외국인 옵션 방향(월물 누적, 억)'});
+  hs.setData(tt.map((t, i) => ({time: t, value: O.D_amt[i], color: O.D_amt[i] >= 0 ? 'rgba(224,52,58,.55)' : 'rgba(47,111,224,.55)'})));
+  ch.timeScale().fitContent();
+}
+setTimeout(initOpt);
 
 // ---- view switching & detail tabs ----
 let VIEW = 'sum';
