@@ -463,7 +463,7 @@ function goIndustry(name) {
 }
 function indScatter(L) {
   const W = 520, H = 300, P = 34, x = v => P + v / 100 * (W - 2 * P), y = v => H - P - v / 100 * (H - 2 * P);
-  const top = new Set(L.slice().sort((a, b) => (b.T + b.E) - (a.T + a.E)).slice(0, 12).map(d => d.industry));
+  const top = new Set(L.slice().sort((a, b) => (b.T + b.E) - (a.T + a.E)).slice(0, 8).map(d => d.industry));
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:620px;height:auto;display:block">
     <rect x="${x(60)}" y="${y(100)}" width="${x(100) - x(60)}" height="${y(60) - y(100)}" fill="#e0343a" opacity=".06"/>
     <line x1="${x(60)}" x2="${x(60)}" y1="${y(0)}" y2="${y(100)}" stroke="var(--line)" stroke-dasharray="3 3"/><line x1="${x(0)}" x2="${x(100)}" y1="${y(60)}" y2="${y(60)}" stroke="var(--line)" stroke-dasharray="3 3"/>
