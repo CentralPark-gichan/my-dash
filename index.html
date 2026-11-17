@@ -22,10 +22,9 @@ h1{font-size:18px;font-weight:600;margin:0}
 .filters input[type=text],.filters input[type=number],.filters select{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:4px 8px;font:inherit}
 .filters input[type=number]{width:72px}
 .filters input[type=text]{width:140px}
-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px;padding:16px 20px}
-@media (max-width:1000px){main{grid-template-columns:1fr}}
+main{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:16px 20px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.tablewrap{max-height:calc(100vh - 190px);overflow:auto}
+.tablewrap{max-height:min(46vh,520px);overflow:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 th{position:sticky;top:0;background:var(--panel);color:var(--muted);font-weight:500;cursor:pointer;user-select:none}
@@ -101,8 +100,8 @@ th{font-size:11.5px;font-weight:650}
     <div class="count" id="count"></div>
     <div class="tablewrap"><table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
   </section>
-  <section class="card">
-    <div class="detail" id="detail"><div class="empty">왼쪽 목록에서 종목을 누르면 일봉 차트가 나옵니다.</div></div>
+  <section class="card detailcard" style="scroll-margin-top:64px">
+    <div class="detail" id="detail"><div class="empty">위 목록에서 종목을 누르면 일봉 차트가 나옵니다.</div></div>
     <div id="price"></div><div id="rsi"></div>
     <div class="detail" style="padding-top:6px">
       <div class="legend"><span>전체 기간 표시 · 마우스 휠로 확대, 드래그로 이동</span><span><i style="background:#eda100"></i>20일선</span><span><i style="background:#8e6bd6"></i>60일선</span><span><i style="background:#1b9e6c;height:3px"></i>다이버전스 연결선</span><span><i style="border-top:2px dashed #1b9e6c;height:0"></i>넥라인</span><span><i style="border-top:2px dashed #d23f31;height:0"></i>무효화 가격</span><span><i style="border-top:2px dashed #9a8f80;height:0"></i>60일 추세 채널</span><span><i style="background:#1b9e6c;height:3px"></i>상승 추세선</span><span><i style="background:#8e6bd6;height:3px"></i>하락 추세선</span><span><i style="border-top:3px dashed #ff3b3b;height:0"></i>저항</span><span><i style="border-top:3px dashed #3d8bff;height:0"></i>지지</span><span><i style="background:#eda100;height:3px"></i>차트 패턴</span></div>
@@ -170,7 +169,12 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
 });
 $('#head').onclick = e => { const k = e.target.dataset.k; if (!k) return; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; render(); };
 document.querySelectorAll('.filters input,.filters select').forEach(el => el.oninput = render);
-$('#body').onclick = e => { const tr = e.target.closest('tr[data-c]'); if (tr) show(tr.dataset.c); };
+$('#body').onclick = async e => {
+  const tr = e.target.closest('tr[data-c]'); if (!tr) return;
+  await show(tr.dataset.c);
+  const d = document.querySelector('.detailcard'), top = d.getBoundingClientRect().top;  // 위아래 배치: 차트가 화면 아래면 이동
+  if (top > innerHeight * 0.55 || top < 0) d.scrollIntoView({behavior: 'smooth', block: 'start'});
+};
 
 // ---------------- chart
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();

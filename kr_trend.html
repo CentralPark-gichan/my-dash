@@ -58,9 +58,8 @@ h1{font-size:20px;margin:0;letter-spacing:-.3px}
 .filters label{display:flex;gap:6px;align-items:center;color:var(--sub);white-space:nowrap}
 .filters input[type=text],.filters input[type=number],.filters select{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 9px;font:inherit}
 .filters input[type=number]{width:70px}.filters input[type=text]{width:150px}
-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px;align-items:start}
-@media (max-width:1050px){main{grid-template-columns:1fr}.detailcard{position:static!important}}
-.tablewrap{max-height:calc(100vh - 150px);overflow:auto;border-top:1px solid var(--line)}
+main{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.tablewrap{max-height:min(46vh,520px);overflow:auto;border-top:1px solid var(--line)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 th{position:sticky;top:0;background:var(--panel);color:var(--muted);font-weight:600;font-size:12px;cursor:pointer;user-select:none}
@@ -70,7 +69,7 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}tbody tr.sel{back
 .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11.5px;font-weight:600;background:var(--hover);color:var(--sub)}
 .badge.ok{background:rgba(27,158,108,.12);color:var(--ok)}.badge.warn{background:rgba(201,133,0,.13);color:var(--warn)}
 .count{color:var(--muted);font-size:12px}
-.detailcard{position:sticky;top:64px;max-height:calc(100vh - 76px);overflow:auto}
+.detailcard{scroll-margin-top:64px}
 .detail{padding:16px 18px}
 .dtitle{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.dtitle b{font-size:20px;letter-spacing:-.3px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:12px 0}
@@ -545,7 +544,12 @@ function drawSF() {
 }
 setTimeout(initSector);
 
-$('#body').onclick = e => { const tr = e.target.closest('tr[data-c]'); if (tr) show(tr.dataset.c); };
+$('#body').onclick = async e => {
+  const tr = e.target.closest('tr[data-c]'); if (!tr) return;
+  await show(tr.dataset.c);
+  const d = document.querySelector('.detailcard'), top = d.getBoundingClientRect().top;  // 위아래 배치: 차트가 화면 아래에 있으면 차트로 이동
+  if (top > innerHeight * 0.55 || top < 0) d.scrollIntoView({behavior: 'smooth', block: 'start'});
+};
 
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let pc, rc, fc;

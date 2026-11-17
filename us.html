@@ -58,9 +58,8 @@ h1{font-size:20px;margin:0;letter-spacing:-.3px}
 .filters label{display:flex;gap:6px;align-items:center;color:var(--sub);white-space:nowrap}
 .filters input[type=text],.filters input[type=number],.filters select{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 9px;font:inherit}
 .filters input[type=number]{width:70px}.filters input[type=text]{width:150px}
-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px;align-items:start}
-@media (max-width:1050px){main{grid-template-columns:1fr}.detailcard{position:static!important}}
-.tablewrap{max-height:calc(100vh - 150px);overflow:auto;border-top:1px solid var(--line)}
+main{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.tablewrap{max-height:min(46vh,520px);overflow:auto;border-top:1px solid var(--line)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 th{position:sticky;top:0;background:var(--panel);color:var(--muted);font-weight:600;font-size:12px;cursor:pointer;user-select:none}
@@ -70,7 +69,7 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}tbody tr.sel{back
 .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11.5px;font-weight:600;background:var(--hover);color:var(--sub)}
 .badge.ok{background:rgba(27,158,108,.12);color:var(--ok)}.badge.warn{background:rgba(201,133,0,.13);color:var(--warn)}
 .count{color:var(--muted);font-size:12px}
-.detailcard{position:sticky;top:64px;max-height:calc(100vh - 76px);overflow:auto}
+.detailcard{scroll-margin-top:64px}
 .detail{padding:16px 18px}
 .dtitle{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.dtitle b{font-size:20px;letter-spacing:-.3px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:12px 0}
@@ -287,7 +286,7 @@ document.title = META.title;
   $('#market').innerHTML = `<div class="kpis">${k('200일선 위 종목', m.above200 + '%', m.above200)}${k('50일선 위 종목', m.above50 + '%', m.above50)}${k('트렌드 템플릿 통과', m.template_pct + '%', m.template_pct * 5)}${k('동일가중 지수 (와인스타인)', m.ew_stage + '단계 <span class="sub">고점 대비 ' + m.ew_from_high + '%</span>')}</div>
     <div class="regime ${weak ? 'warn' : 'ok'}">${weak ? '약세 국면 — 시장이 약하면 주도주도 함께 하락. 비중 축소·신규 진입 신중 (백테스트: 약세장 눌림 매수 20일 -0.7%)' : '우호적 국면 — 눌림목 매수 유효'}</div>`; }
 let tab = 'pull', sortKey = 'pull_score', sortDir = -1, selected = null;
-const COLS = [['symbol','종목'],['why_rank','상승 이유'],['stage','단계'],['close','종가'],['pct','등락'],['rs','RS'],['pull_score','눌림점수'],['depth_pct','고점대비%'],['support','지지선'],['pct_f','외인 수급 P'],
+const COLS = [['symbol','종목'],['why_rank','상승 이유'],['stage','단계'],['close','종가'],['pct','등락'],['rs','RS'],['pull_score','눌림점수'],['depth_pct','고점대비%'],['support','지지선'],['pct_f','외인 수급 P'],['etf_score','ETF 수급'],
   ['retrace_pct','되돌림%',1],['vol_ratio_5_50','거래량비',1],['rsi','RSI',1],['weinstein','W단계',1],['template_score','템플릿',1],['mktcap_b','시총',1],['industry','업종',1]];
 const EXCOLS = [['symbol','종목'],['exit_severity','이탈 강도'],['exit_days','이탈일'],['since_exit_pct','이탈 후'],['exit_heavy','대량거래'],['exit_lost','이탈 계기'],
   ['template_score','템플릿'],['exit_vs50','50일선 대비'],['exit_vs200','200일선 대비'],['rs','RS'],['why_rank','이전 상승 이유'],['industry','업종']];
@@ -361,7 +360,7 @@ function render() {
     <td style="text-align:left">${r.why ? `<span class="cltag" title="${r.why.why}"><span class="dur ${DUR_DOT(r.why.durability)}"></span>${r.why.cluster}</span>` : '<span class="sub">–</span>'}</td>
     <td style="text-align:left"><span class="st ${ST_CLS(r.stage)}">${r.stage}</span></td>
     <td>${fmtp(r.close, 2)}</td><td class="${sign(r.pct)}">${fmt(r.pct, 2)}%</td>
-    <td><b>${fmt(r.rs, 0)}</b></td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td><td title="외국인 수급 위치 P (기관 P${fmt(r.pct_o, 0)}) · 4개월 누적 포지션 ${fmt(r.pos_f, 0)}">${r.pct_f == null ? '–' : `<b style="color:${r.pct_f <= 25 ? '#2f6fe0' : r.pct_f >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.pct_f, 0)}</b>`}</td>
+    <td><b>${fmt(r.rs, 0)}</b></td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td><td title="외국인 수급 위치 P (기관 P${fmt(r.pct_o, 0)}) · 4개월 누적 포지션 ${fmt(r.pos_f, 0)}">${r.pct_f == null ? '–' : `<b style="color:${r.pct_f <= 25 ? '#2f6fe0' : r.pct_f >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.pct_f, 0)}</b>`}</td><td title="${r.etf ? `ETF 보유율 ${fmt(r.etf.etf_own, 2)}% · ${r.etf.n_etf}개 ETF(액티브 ${r.etf.n_active}) · 1개월 순유입 ${fmt(r.etf.f1m, 1)}bp` : 'ETF 미편입'}">${r.etf ? `<b style="color:${r.etf.score >= 75 ? '#e0343a' : r.etf.score <= 25 ? '#2f6fe0' : 'inherit'}">${fmt(r.etf.score, 0)}</b> <span class="sub">${r.etf.n_active ? 'A' + r.etf.n_active : ''}</span>` : '–'}</td>
     <td class="xc">${fmt(r.retrace_pct, 0)}</td><td class="xc">${fmt(r.vol_ratio_5_50, 2)}</td><td class="xc">${fmt(r.rsi, 0)}</td>
     <td class="xc">${r.weinstein}</td><td class="xc">${r.template_score}/8</td><td class="xc">${fmt(r.mktcap_b, 1)}</td><td class="xc">${r.industry || ''}</td></tr>`).join('')
     || `<tr><td colspan="17" class="empty">조건에 맞는 종목이 없습니다</td></tr>`;
@@ -545,7 +544,12 @@ function drawSF() {
 }
 setTimeout(initSector);
 
-$('#body').onclick = e => { const tr = e.target.closest('tr[data-c]'); if (tr) show(tr.dataset.c); };
+$('#body').onclick = async e => {
+  const tr = e.target.closest('tr[data-c]'); if (!tr) return;
+  await show(tr.dataset.c);
+  const d = document.querySelector('.detailcard'), top = d.getBoundingClientRect().top;  // 위아래 배치: 차트가 화면 아래에 있으면 차트로 이동
+  if (top > innerHeight * 0.55 || top < 0) d.scrollIntoView({behavior: 'smooth', block: 'start'});
+};
 
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let pc, rc, fc;
@@ -716,6 +720,7 @@ async function show(code) {
       ${kv('거래량 5일÷50일', `${fmt(r.vol_ratio_5_50, 2)}${r.vol_dry ? ' ✓ 감소' : ''}`)}
       ${r.pct_f != null ? `<div class="kv" style="cursor:pointer" onclick="openStockFlow('${r.code}')"><span>수급 오실레이터 차트</span><b style="color:var(--acc)">열기 ↗</b></div>` : ''}
       ${r.pct_f != null ? kv('외국인 / 기관 수급 위치 (P, 4개월)', `P${fmt(r.pct_f, 0)} / P${fmt(r.pct_o, 0)}${r.pct_f <= 25 ? ' · 외국인 바텀권' : r.pct_f >= 75 ? ' · 외국인 과열권' : ''}`) : ''}
+      ${r.etf ? kv('ETF 수급 (국내 ETF 전체 구성종목)', `<span title="ETF 수혜점수 = 시총 대비 ETF 보유율 백분위 50% + 1개월 ETF 순유입 압력 백분위 50%">수혜점수 ${fmt(r.etf.score, 0)}</span> · 보유율 ${fmt(r.etf.etf_own, 2)}% (${r.etf.n_etf}개 ETF, 액티브 ${r.etf.n_active}개 ${fmt(r.etf.act_own, 2)}%) · 순유입 1주 ${fmt(r.etf.f1w, 1)} / 1개월 ${fmt(r.etf.f1m, 1)} / 3개월 ${fmt(r.etf.f3m, 1)}bp`) : ''}
       ${r.pos_f != null ? kv('외국인 4개월 누적 포지션 (0=가장 비움)', `${fmt(r.pos_f, 0)} · ${r.fpos_state || ''}`) : ''}
       ${r.osc != null ? kv('수급 오실레이터 / 3개월 강도', `${fmt(r.osc, 1)} (${r.osc_state}) / ${fmt(r.str60, 1)}%`) : ''}</div>
       ${r.pos_f != null ? '<div class="sub" style="margin-top:6px">백테스트(국내 반등 진입→3일 이탈 청산, 4개월 창): 외국인 수급 바텀권(P≤25) 진입 +4.8%(P≤10 +6.0%) vs 전체 +3.9% — 추세 유지 중 외국인 단기 비움은 기회(통계적 유의성은 아직 약함). 반대로 4개월 누적 포지션 장기 이탈(≤20) -1.8%, 기관 바텀권 +0.6%로 열위.</div>' : ''}</div>
