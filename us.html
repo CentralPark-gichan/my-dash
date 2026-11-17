@@ -129,6 +129,8 @@ td.nm b{font-size:14px}td.nm .sub{font-size:12px}
 .rmgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;padding:12px 20px 20px}@media (max-width:1050px){.rmgrid{grid-template-columns:1fr}}
 .picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;padding:12px 20px 4px}
 .pick{border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;background:var(--panel)}.pick:hover{border-color:var(--acc)}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:4px 10px;font:inherit;font-size:12.5px;cursor:pointer}.btn:hover{border-color:var(--acc);color:var(--acc)}
+#indpanel tr[data-mc]{cursor:pointer}#indpanel tr[data-mc]:hover{background:var(--hover)}
 .pick b{font-size:14.5px}.pick .sub{display:block;margin-top:4px;line-height:1.55;font-size:12.5px;color:var(--sub)}
 .rmt{width:100%;font-size:12.5px}.rmt td,.rmt th{padding:7px 8px}.rmt tr[data-c]{cursor:pointer}
 .secbar{display:grid;grid-template-columns:minmax(0,1fr) 90px 44px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}
@@ -456,10 +458,36 @@ async function initIndustry() {
   try { IND = await (await fetch(`${META.charts}/industry_topdown.json`)).json(); } catch (e) { return; }
   $('#indcard').style.display = ''; renderInd();
 }
-function goIndustry(name) {
+let indSel = null;
+function goIndustry(name) {  // 업종 클릭 → 카드 안에 그 업종 구성종목 패널 (추세 목록에 없는 업종도 표시)
+  indSel = indSel === name ? null : name; renderInd();
+  const p = $('#indpanel'); if (p) p.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+function indListFilter(name) {  // 추세 목록에서 이 업종만
   setView('list');
-  const sel = $('#ind'); if (sel && [...sel.options].some(o => o.value === name)) { sel.value = name; sel.dispatchEvent(new Event('change')); }
   const tb = document.querySelector('.tabs button[data-k="trend"]'); if (tb) tb.click();
+  const sel = $('#ind'); if (sel) { sel.value = name; sel.dispatchEvent(new Event('change')); }
+}
+function openMember(code) {
+  if (DATA.rows.find(r => r.code === code)) {
+    setView('list'); show(code).then(() => document.querySelector('.detailcard').scrollIntoView({behavior: 'smooth', block: 'start'}));
+  } else if (typeof FI !== 'undefined' && FI && FI[code]) openStockFlow(code);
+  else if (typeof initSector === 'function' && (typeof FI === 'undefined' || !FI)) initSector().then(() => FI && FI[code] ? openStockFlow(code) : window.open(`https://m.stock.naver.com/domestic/stock/${code}/total`, '_blank'));
+  else window.open(`https://m.stock.naver.com/domestic/stock/${code}/total`, '_blank');
+}
+function indPanel(d) {
+  const inList = new Set(DATA.rows.map(r => r.code)), hasOpt = $('#ind') && [...$('#ind').options].some(o => o.value === d.industry);
+  const pc = v => v == null ? '–' : `<span class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${v > 0 ? '+' : ''}${fmt(v, 1)}%</span>`;
+  const GC = {A: '#e0343a', B: '#4f46e5', '경고': '#2f6fe0', C: '#9aa0aa'};
+  return `<div id="indpanel" style="margin:0 20px 14px;border:1px solid ${RG[d.regime]};border-radius:14px;padding:12px 14px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tg" style="color:${RG[d.regime]};border-color:${RG[d.regime]}">${d.regime}</span><b style="font-size:15px">${d.industry}</b>
+      <span class="sub">T ${fmt(d.T, 0)} / E ${fmt(d.E, 0)} · 정배열 ${fmt(d.br_stack, 0)}% · 영업이익 YoY ${d.op_yoy == null ? '–' : fmt(d.op_yoy, 0) + '%'} → 컨센 ${d.op_yoy_cns == null ? '–' : fmt(d.op_yoy_cns, 0) + '%'} · 시총 상위 ${d.members.length}종목</span>
+      <span style="margin-left:auto;display:flex;gap:6px">${hasOpt ? `<button class="btn" onclick="indListFilter('${d.industry}')">추세 목록에서 보기</button>` : '<span class="sub">추세 목록에 이 업종 종목 없음</span>'}<button class="btn" onclick="goIndustry('${d.industry}')">닫기 ✕</button></span></div>
+    <div style="overflow:auto;margin-top:8px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>시총</th><th title="정배열 / 템플릿 8/8">추세</th><th>20일</th><th>60일</th><th title="최근 분기 영업이익 YoY">영업이익</th><th title="리포트 검증점수 등급 (v20)">리포트</th><th></th></tr></thead><tbody>
+    ${d.members.map(m => `<tr data-mc="${m.code}"><td style="text-align:left"><b>${m.name}</b> <span class="sub">${m.code}</span></td><td>${fmt(m.cap_jo, 1)}조</td>
+      <td>${m.tmpl ? '<span class="tg py">8/8</span>' : m.stack ? '<span class="tg">정배열</span>' : '<span class="sub">–</span>'}</td><td>${pc(m.r20)}</td><td>${pc(m.r60)}</td><td>${pc(m.op_yoy)}</td>
+      <td>${m.grade ? `<b style="color:${GC[m.grade]}">${m.grade}</b> <span class="sub">${m.v20 > 0 ? '+' : ''}${m.v20}</span>` : '<span class="sub">–</span>'}</td>
+      <td class="sub">${inList.has(m.code) ? '차트·분석 ↗' : '차트(수급) ↗'}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 function indScatter(L) {
   const W = 520, H = 300, P = 34, x = v => P + v / 100 * (W - 2 * P), y = v => H - P - v / 100 * (H - 2 * P);
@@ -484,7 +512,7 @@ function renderInd() {
     <td>${pc(d.op_yoy)} → ${pc(d.op_yoy_cns)}</td><td>${fmt(d.rep_v_per, 1)} <span class="sub">${d.rep_cov}종목</span></td>
     <td><b style="color:${fc(d.flow_p)}">${d.flow_p == null ? '–' : 'P' + fmt(d.flow_p, 0)}</b></td><td class="${sign(d.r20)}">${fmt(d.r20, 1)}%</td>
     <td style="text-align:left;white-space:normal;min-width:180px" class="sub">${(d.stack_names.length ? d.stack_names : d.leaders).slice(0, 4).join(', ')}</td></tr>`;
-  $('#indcard').innerHTML = `<div class="sec-h">산업 탑다운 — 업종 자체의 추세·이익 모멘텀 <span class="sub">${IND.date} · 업종 ${L.length}개 · 주도 ${cnt('주도')} · 이익 선행 ${cnt('이익 선행')} · 추세만 ${cnt('추세만')} · 소외 ${cnt('소외')}</span></div>
+  $('#indcard').innerHTML = `<div class="sec-h">산업 탑다운 — 업종 자체의 추세·이익 모멘텀 <span class="sub">${IND.date} · 업종 ${L.length}개 · 주도 ${cnt('주도')} · 이익 선행 ${cnt('이익 선행')} · 추세만 ${cnt('추세만')} · 소외 ${cnt('소외')} · <b title="업종지수 자체가 완전 정배열(종가>50>150>200, 200일선 상승)인 업종 수 — T는 업종 간 상대 순위라 시장 전체가 약할 땐 이 숫자로 절대 수준을 확인">업종지수 정배열 ${L.filter(d => d.idx_pos === 100).length}/${L.length}</b></span></div>
     <div class="sub" style="padding:4px 20px 0;line-height:1.6">백테스트(2024~, 정배열 종목 8,184건): 같은 추세 종목이라도 <b>업종 추세 상위 3분위면 60일 시장대비 +6.0%</b>, 하위면 −0.2% · 업종 내 정배열 비율 60%↑면 +8.2%(승률 53%) → <b>개별 추세는 업종 추세가 받쳐 줄 때 산다</b></div>
     <div class="rmgrid"><div>${indScatter(L)}</div><div class="sub" style="line-height:1.75;font-size:12.5px">
       <b style="color:#e0343a">주도</b> 업종 추세·이익 모두 상위 → 이 업종의 추세 종목을 1순위로<br>
@@ -493,9 +521,12 @@ function renderInd() {
       <b style="color:#9aa0aa">소외</b> 업종 역풍 → 개별 추세 종목도 실패 확률이 높음<br>
       T = RS 35% + 정배열 종목 비율 35% + 업종지수 정배열 30% · E = 영업이익 YoY 30% + 다음 분기 컨센 YoY 30% + 리포트 검증점수 40% · 점을 누르면 그 업종 종목 목록으로</div></div>
     <div style="display:flex;align-items:center;gap:10px;padding:0 20px 6px"><b>업종 판정표</b><div class="seg" id="indtab" style="margin-left:auto">${['top', '주도', '이익 선행', '추세만', '소외'].map(k => `<button data-t="${k}" class="${indTab === k ? 'on' : ''}">${k === 'top' ? 'T+E 상위' : k}</button>`).join('')}</div></div>
+    ${indSel && L.find(d => d.industry === indSel) ? indPanel(L.find(d => d.industry === indSel)) : ''}
     <div style="overflow:auto;padding:0 20px 18px"><table class="rmt"><thead><tr><th style="text-align:left">업종</th><th title="추세 점수">T</th><th title="이익 점수">E</th><th title="업종지수 3·6개월 수익 백분위">RS</th><th title="구성종목 중 정배열 비율 (20일 전 대비)">정배열 폭</th><th title="업종지수 정배열 점수(100 = 완전 정배열)">지수</th><th title="최근 실적 분기 영업이익 합 YoY → 다음 분기 컨센서스 YoY">영업이익 YoY</th><th title="리포트 검증점수(v20) 종목당 평균">리포트</th><th title="업종 외+기 수급 위치">수급</th><th>20일</th><th style="text-align:left">정배열 종목</th></tr></thead><tbody>${list.map(tr).join('')}</tbody></table></div>`;
   $('#indcard').onclick = e => {
     const t = e.target.closest('#indtab button'); if (t) { indTab = t.dataset.t; renderInd(); return; }
+    if (e.target.closest('button')) return;
+    const m = e.target.closest('[data-mc]'); if (m) { openMember(m.dataset.mc); return; }
     const r = e.target.closest('[data-ind]'); if (r) goIndustry(r.dataset.ind);
   };
 }
