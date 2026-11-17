@@ -75,7 +75,7 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}tbody tr.sel{back
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:12px 0}
 .kv{background:var(--hover);border-radius:10px;padding:9px 11px}.kv span{display:block;color:var(--muted);font-size:11px}.kv b{font-weight:650;font-size:13px}
 .checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-#price{height:400px}#rsi{height:120px;border-top:1px solid var(--line)}#flowc{height:0;border-top:1px solid var(--line)}#flowc.on{height:130px}
+#price,#s_price{height:400px}#rsi,#s_rsi{height:120px;border-top:1px solid var(--line)}#flowc,#s_flowc{height:0;border-top:1px solid var(--line)}#flowc.on,#s_flowc.on{height:130px}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--muted);margin:6px 0}
 .legend i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:4px}
 .why{margin-top:14px;border:1px solid var(--acc);border-radius:12px;padding:12px 14px;background:linear-gradient(0deg,var(--panel),var(--acc-soft))}
@@ -131,6 +131,10 @@ td.nm b{font-size:14px}td.nm .sub{font-size:12px}
 .pick{border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;background:var(--panel)}.pick:hover{border-color:var(--acc)}
 .btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:4px 10px;font:inherit;font-size:12.5px;cursor:pointer}.btn:hover{border-color:var(--acc);color:var(--acc)}
 #indpanel tr[data-mc]{cursor:pointer}#indpanel tr[data-mc]:hover{background:var(--hover)}
+.sq{position:relative;margin-left:auto;margin-right:12px}.sq input{width:240px;max-width:42vw;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:7px 12px;font:inherit;font-size:13px}
+.sq input:focus{outline:none;border-color:var(--acc)}#sqlist{position:absolute;right:0;top:38px;width:320px;max-height:60vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);z-index:50;display:none}
+#sqlist div{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line)}#sqlist div:hover,#sqlist div.on{background:var(--hover)}
+.skv{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;padding:12px 20px 18px}.skv>div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.7}.skv b.h{display:block;font-size:13.5px;margin-bottom:4px}
 .pick b{font-size:14.5px}.pick .sub{display:block;margin-top:4px;line-height:1.55;font-size:12.5px;color:var(--sub)}
 .rmt{width:100%;font-size:12.5px}.rmt td,.rmt th{padding:7px 8px}.rmt tr[data-c]{cursor:pointer}
 .secbar{display:grid;grid-template-columns:minmax(0,1fr) 90px 44px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}
@@ -215,6 +219,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
 <div class="topbar"><div class="in">
   <div class="brand"><i></i>My Dash</div>
   <nav class="navs"><a href="index.html">국내 다이버전스</a><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a></nav>
+  <div class="sq" id="sqbox" style="display:none"><input id="sq" type="search" placeholder="종목 검색 (이름·코드)" autocomplete="off"><div id="sqlist"></div></div>
   <span class="day" id="day"></span>
 </div></div>
 <div class="wrap">
@@ -222,10 +227,12 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <div class="view on" id="v-sum">
   <section class="card"><div class="sec-h"><span class="dot"></span>오늘의 시장 <span class="sub">시장 방향(M)</span></div><div id="market"></div></section>
   <section class="card" id="regcard" style="display:none"></section>
+  <section class="card" id="optcard" style="display:none"></section>
   <section class="card" id="indcard" style="display:none"></section>
   <section class="card" id="rmcard" style="display:none"></section>
   <div id="overview" style="display:contents"></div>
   </div>
+  <div class="view" id="v-stock"><section class="card" id="stockcard"></section></div>
   <div class="view" id="v-flow">
   <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종·종목 수급 오실레이터 <span class="sub">수급오실레이터 = (외국인+기관 5일 순매수 ÷ 시총)의 MACD(12,26,9) 히스토그램 · 현재 수급 위치 P = 최근 60일 중 퍼센타일 · P≤25 바텀권(수급 비움) / P≥75 과열권 (태린이아빠 원본 공식)</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button><button data-k="종목">종목</button></div><div class="seg" id="sfbase" style="display:none"><button data-b="1" class="on">외+기 기준</button><button data-b="2">외국인</button><button data-b="3">기관</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div><div id="sfind"></div></section>
   </div>
@@ -290,7 +297,7 @@ document.title = META.title;
   $('#market').innerHTML = `<div class="kpis">${k('200일선 위 종목', m.above200 + '%', m.above200)}${k('50일선 위 종목', m.above50 + '%', m.above50)}${k('트렌드 템플릿 통과', m.template_pct + '%', m.template_pct * 5)}${k('동일가중 지수 (와인스타인)', m.ew_stage + '단계 <span class="sub">고점 대비 ' + m.ew_from_high + '%</span>')}</div>
     <div class="regime ${weak ? 'warn' : 'ok'}">${weak ? '약세 국면 — 시장이 약하면 주도주도 함께 하락. 비중 축소·신규 진입 신중 (백테스트: 약세장 눌림 매수 20일 -0.7%)' : '우호적 국면 — 눌림목 매수 유효'}</div>`; }
 let tab = 'pull', sortKey = 'pull_score', sortDir = -1, selected = null;
-const COLS = [['symbol','종목'],['why_rank','상승 이유'],['ind_T','업종 판정'],['stage','단계'],['close','종가'],['pct','등락'],['rs','RS'],['mrs','지수대비'],['pull_score','눌림점수'],['depth_pct','고점대비%'],['support','지지선'],['pct_f','외인 수급 P'],['etf_score','ETF 수급'],
+const COLS = [['symbol','종목'],['why_rank','상승 이유'],['ind_T','업종 판정'],['stage','단계'],['close','종가'],['pct','등락'],['rs','RS'],['mrs','지수대비'],['trig_score','트리거'],['pull_score','눌림점수'],['depth_pct','고점대비%'],['support','지지선'],['pct_f','외인 수급 P'],['etf_score','ETF 수급'],
   ['retrace_pct','되돌림%',1],['vol_ratio_5_50','거래량비',1],['rsi','RSI',1],['weinstein','W단계',1],['template_score','템플릿',1],['mktcap_b','시총',1],['industry','업종',1]];
 const EXCOLS = [['symbol','종목'],['exit_severity','이탈 강도'],['exit_days','이탈일'],['since_exit_pct','이탈 후'],['exit_heavy','대량거래'],['exit_lost','이탈 계기'],
   ['template_score','템플릿'],['exit_vs50','50일선 대비'],['exit_vs200','200일선 대비'],['rs','RS'],['why_rank','이전 상승 이유'],['industry','업종']];
@@ -365,10 +372,10 @@ function render() {
     <td style="text-align:left">${r.ind_regime ? (c => `<span class="tg" style="color:${c};border-color:${c}" title="${r.industry} 업종 — 추세 T ${fmt(r.ind_T, 0)} / 이익 E ${fmt(r.ind_E, 0)} / 정배열 폭 ${fmt(r.ind_br, 0)}%${r.ind_decel ? ' · 이익 증가율 둔화' : ''}">${r.ind_regime}</span> <span class="sub">${fmt(r.ind_T, 0)}/${fmt(r.ind_E, 0)}</span>`)({'주도': '#e0343a', '이익 선행': '#c98500', '추세만': '#4f46e5', '소외': '#9aa0aa'}[r.ind_regime]) : '<span class="sub">–</span>'}</td>
     <td style="text-align:left"><span class="st ${ST_CLS(r.stage)}">${r.stage}</span></td>
     <td>${fmtp(r.close, 2)}</td><td class="${sign(r.pct)}">${fmt(r.pct, 2)}%</td>
-    <td><b>${fmt(r.rs, 0)}</b></td><td title="${r.rsx ? `Mansfield RS ${fmt(r.rsx.mrs, 1)} (0 위 = ${r.rsx.bm}보다 강함) · RS 등급(12-1) ${r.rsx.rating ?? '–'} · 지수대비 1개월 ${fmt(r.rsx.x21, 1)}% / 3개월 ${fmt(r.rsx.x63, 1)}% / 12개월 ${fmt(r.rsx.x252, 1)}%${r.rsx.rs_hi ? ' · RS 라인 52주 신고가' : ''}` : ''}">${r.rsx ? `<b style="color:${r.rsx.mrs > 0 ? 'var(--up)' : 'var(--down)'}">${r.rsx.mrs > 0 ? '+' : ''}${fmt(r.rsx.mrs, 0)}</b>${r.rsx.rs_hi ? ' <span class="tg py" title="RS 라인 52주 신고가">RS高</span>' : ''}` : '–'}</td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td><td title="외국인 수급 위치 P (기관 P${fmt(r.pct_o, 0)}) · 4개월 누적 포지션 ${fmt(r.pos_f, 0)}">${r.pct_f == null ? (r.uflow_p != null ? `<b title="미국 수급 오실레이터 252일 퍼센타일(가격·거래량 기반)" style="color:${r.uflow_p <= 25 ? '#2f6fe0' : r.uflow_p >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.uflow_p, 0)}</b>` : '–') : `<b style="color:${r.pct_f <= 25 ? '#2f6fe0' : r.pct_f >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.pct_f, 0)}</b>`}</td><td title="${r.etf ? `ETF 보유율 ${fmt(r.etf.etf_own, 2)}% · ${r.etf.n_etf}개 ETF(액티브 ${r.etf.n_active}) · 1개월 순유입 ${fmt(r.etf.f1m, 1)}bp` : 'ETF 미편입'}">${r.etf ? `<b style="color:${r.etf.score >= 75 ? '#e0343a' : r.etf.score <= 25 ? '#2f6fe0' : 'inherit'}">${fmt(r.etf.score, 0)}</b> <span class="sub">${r.etf.n_active ? 'A' + r.etf.n_active : ''}</span>` : '–'}</td>
+    <td><b>${fmt(r.rs, 0)}</b></td><td title="${r.rsx ? `Mansfield RS ${fmt(r.rsx.mrs, 1)} (0 위 = ${r.rsx.bm}보다 강함) · RS 등급(12-1) ${r.rsx.rating ?? '–'} · 지수대비 1개월 ${fmt(r.rsx.x21, 1)}% / 3개월 ${fmt(r.rsx.x63, 1)}% / 12개월 ${fmt(r.rsx.x252, 1)}%${r.rsx.rs_hi ? ' · RS 라인 52주 신고가' : ''}` : ''}">${r.rsx ? `<b style="color:${r.rsx.mrs > 0 ? 'var(--up)' : 'var(--down)'}">${r.rsx.mrs > 0 ? '+' : ''}${fmt(r.rsx.mrs, 0)}</b>${r.rsx.rs_hi ? ' <span class="tg py" title="RS 라인 52주 신고가">RS高</span>' : ''}` : '–'}</td><td title="${r.trig_pos ? '＋ ' + r.trig_pos.join(' / ') + (r.trig_neg && r.trig_neg.length ? '\n－ ' + r.trig_neg.join(' / ') : '') : ''}">${r.trig_score == null ? '–' : `<b style="color:${r.trig_score >= 4 ? '#e0343a' : r.trig_score <= 1 ? '#9aa0aa' : 'inherit'}">${r.trig_score}</b><span class="sub">/7</span>${r.rs_reaccel ? ' <span class="tg py" title="RS 재가속: 12M 강함 → 3·6M 조정 → 1M 재상승">재가속</span>' : ''}`}</td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td><td title="외국인 수급 위치 P (기관 P${fmt(r.pct_o, 0)}) · 4개월 누적 포지션 ${fmt(r.pos_f, 0)}">${r.pct_f == null ? (r.uflow_p != null ? `<b title="미국 수급 오실레이터 252일 퍼센타일(가격·거래량 기반)" style="color:${r.uflow_p <= 25 ? '#2f6fe0' : r.uflow_p >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.uflow_p, 0)}</b>` : '–') : `<b style="color:${r.pct_f <= 25 ? '#2f6fe0' : r.pct_f >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.pct_f, 0)}</b>`}</td><td title="${r.etf ? `ETF 보유율 ${fmt(r.etf.etf_own, 2)}% · ${r.etf.n_etf}개 ETF(액티브 ${r.etf.n_active}) · 1개월 순유입 ${fmt(r.etf.f1m, 1)}bp` : 'ETF 미편입'}">${r.etf ? `<b style="color:${r.etf.score >= 75 ? '#e0343a' : r.etf.score <= 25 ? '#2f6fe0' : 'inherit'}">${fmt(r.etf.score, 0)}</b> <span class="sub">${r.etf.n_active ? 'A' + r.etf.n_active : ''}</span>` : '–'}</td>
     <td class="xc">${fmt(r.retrace_pct, 0)}</td><td class="xc">${fmt(r.vol_ratio_5_50, 2)}</td><td class="xc">${fmt(r.rsi, 0)}</td>
     <td class="xc">${r.weinstein}</td><td class="xc">${r.template_score}/8</td><td class="xc">${fmt(r.mktcap_b, 1)}</td><td class="xc">${r.industry || ''}</td></tr>`).join('')
-    || `<tr><td colspan="20" class="empty">조건에 맞는 종목이 없습니다</td></tr>`;
+    || `<tr><td colspan="21" class="empty">조건에 맞는 종목이 없습니다</td></tr>`;
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
@@ -497,9 +504,7 @@ function indListFilter(name) {  // 추세 목록에서 이 업종만
 function openMember(code) {
   if (DATA.rows.find(r => r.code === code)) {
     setView('list'); show(code).then(() => document.querySelector('.detailcard').scrollIntoView({behavior: 'smooth', block: 'start'}));
-  } else if (typeof FI !== 'undefined' && FI && FI[code]) openStockFlow(code);
-  else if (typeof initSector === 'function' && (typeof FI === 'undefined' || !FI)) initSector().then(() => FI && FI[code] ? openStockFlow(code) : window.open(`https://m.stock.naver.com/domestic/stock/${code}/total`, '_blank'));
-  else window.open(`https://m.stock.naver.com/domestic/stock/${code}/total`, '_blank');
+  } else openStock(code);
 }
 function indPanel(d) {
   const inList = new Set(DATA.rows.map(r => r.code)), hasOpt = $('#ind') && [...$('#ind').options].some(o => o.value === d.industry);
@@ -589,6 +594,151 @@ async function initRegime() {
   ch.timeScale().fitContent();
 }
 setTimeout(initRegime);
+// ── 외국인 KOSPI200 옵션(월물) 포지션 (research/foreign_options.py, KRX 투자자별 거래실적) ──
+async function initOpt() {
+  if (META.market !== 'KR') return;
+  let O; try { O = await (await fetch(`${META.charts}/foreign_options.json`)).json(); } catch (e) { return; }
+  const up = O.D_amt > 0, col = up ? '#e0343a' : '#2f6fe0';
+  const exp = O.cycle_exp === 'next' ? '다음 만기(12월 둘째 목)' : O.cycle_exp;
+  const hedge = O.fut_qty > 0 && O.D_amt < 0 ? ' · 선물은 순매수(+)인데 풋 매수 → 현물·선물 롱의 하방 헤지 성격일 수 있음' : O.fut_qty < 0 && O.D_amt > 0 ? ' · 선물 순매도 + 콜 매수 → 헤지 성격' : '';
+  $('#optcard').style.display = '';
+  $('#optcard').innerHTML = `<div class="sec-h">외국인 옵션 포지션 (코스피200 월물) <span class="sub">${O.date} · 현재 월물 ${O.days}거래일째 · 월물 안 누적 순매수 (KRX 투자자별 거래실적)</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="sub">외국인 방향</div><b style="font-size:22px;color:${col}">${O.view}</b><div class="sub">콜−풋 순매수 ${O.D_amt > 0 ? '+' : ''}${O.D_amt.toLocaleString()}억 · 2022년 이후 하위 ${fmt(O.D_pct, 0)}%</div></div>
+      <div class="kpi"><div class="sub">콜 순매수</div><b style="font-size:20px">${O.call_amt.toLocaleString()}억</b><div class="sub">${O.call_qty.toLocaleString()}계약</div></div>
+      <div class="kpi"><div class="sub">풋 순매수</div><b style="font-size:20px">${O.put_amt.toLocaleString()}억</b><div class="sub">${O.put_qty.toLocaleString()}계약</div></div>
+      <div class="kpi"><div class="sub">선물 순매수 (참고)</div><b style="font-size:20px" class="${O.fut_qty > 0 ? 'up' : 'down'}">${O.fut_qty == null ? '–' : (O.fut_qty > 0 ? '+' : '') + O.fut_qty.toLocaleString() + '계약'}</b><div class="sub">월물 중 코스피 ${O.kospi_cycle > 0 ? '+' : ''}${fmt(O.kospi_cycle, 1)}%</div></div>
+    </div>
+    <div class="sub" style="padding:0 20px 8px;line-height:1.7">＋ = 상방(콜 매수·풋 매도), − = 하방(풋 매수·콜 매도)${hedge}<br>
+      검증(2022~, 60개 월물): 옵션 대금 방향은 코스피 예측력 거의 없음(20일 순위상관 −0.02), 계약수 방향은 약한 양(+0.10). 월물 첫 5일 하방 시작 → 이후 코스피 +1.6% vs 상방 시작 +0.0% — 외국인 풋 매수는 '하락 베팅'보다 헤지인 경우가 많음. 단독 근거로 쓰지 말고 시장 국면·Breadth와 함께</div>
+    <div id="optchart" style="height:200px;margin:0 16px 16px"></div>`;
+  const ch = LightweightCharts.createChart($('#optchart'), {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
+    grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, autoSize: true, leftPriceScale: {visible: true, borderVisible: false}, rightPriceScale: {borderVisible: false}});
+  const tt = O.t.map(x => `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6, 8)}`);
+  ch.addLineSeries({color: css('--ink'), lineWidth: 2, priceScaleId: 'left', priceLineVisible: false, title: 'KOSPI'}).setData(tt.map((t, i) => ({time: t, value: O.k[i]})));
+  const hs = ch.addHistogramSeries({priceScaleId: 'right', priceLineVisible: false, title: '외국인 옵션 방향(월물 누적, 억)'});
+  hs.setData(tt.map((t, i) => ({time: t, value: O.D_amt[i], color: O.D_amt[i] >= 0 ? 'rgba(224,52,58,.55)' : 'rgba(47,111,224,.55)'})));
+  ch.timeScale().fitContent();
+  // 행사가별 미결제약정 (research/option_strikes.py) — 근월물, 현재가 ±15%
+  let S; try { S = await (await fetch(`${META.charts}/option_strikes.json`)).json(); } catch (e) { return; }
+  const mx = Math.max(1, ...S.call_oi, ...S.put_oi), W = 640, rowH = 15, top = 24, H = top + S.strikes.length * rowH + 10, mid = W / 2;
+  const ks = S.strikes.slice().reverse(), ci = S.call_oi.slice().reverse(), pi = S.put_oi.slice().reverse(), cd = S.call_d5.slice().reverse(), pd_ = S.put_d5.slice().reverse();
+  const sy = top + ks.findIndex(k => k <= S.k200) * rowH;
+  const bars = ks.map((k, i) => { const y = top + i * rowH, cw = ci[i] / mx * (mid - 60), pw = pi[i] / mx * (mid - 60);
+    const tag = k === S.call_wall ? ' 콜벽' : k === S.put_wall ? ' 풋벽' : k === S.max_pain ? ' 맥스페인' : '';
+    return `<rect x="${mid + 30}" y="${y + 2}" width="${cw}" height="${rowH - 4}" fill="#e0343a" opacity="${cd[i] > 0 ? .85 : .45}"><title>콜 ${k}: OI ${ci[i].toLocaleString()} (5일 ${cd[i] > 0 ? '+' : ''}${cd[i].toLocaleString()})</title></rect>
+      <rect x="${mid - 30 - pw}" y="${y + 2}" width="${pw}" height="${rowH - 4}" fill="#2f6fe0" opacity="${pd_[i] > 0 ? .85 : .45}"><title>풋 ${k}: OI ${pi[i].toLocaleString()} (5일 ${pd_[i] > 0 ? '+' : ''}${pd_[i].toLocaleString()})</title></rect>
+      <text x="${mid}" y="${y + rowH - 4}" text-anchor="middle" font-size="10" fill="${tag ? 'var(--ink)' : 'var(--muted)'}" font-weight="${tag ? 700 : 400}">${k}</text>
+      ${tag ? `<text x="${W - 4}" y="${y + rowH - 4}" text-anchor="end" font-size="10" fill="var(--ink)" font-weight="700">${tag.trim()}</text>` : ''}`; }).join('');
+  const svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:760px;height:auto;display:block;margin:0 auto">
+    <text x="${mid - 34}" y="14" text-anchor="end" font-size="11" fill="#2f6fe0" font-weight="700">← 풋 미결제약정</text><text x="${mid + 34}" y="14" font-size="11" fill="#e0343a" font-weight="700">콜 미결제약정 →</text>
+    ${bars}<line x1="0" x2="${W}" y1="${sy}" y2="${sy}" stroke="var(--ink)" stroke-dasharray="4 3"/><text x="4" y="${sy - 3}" font-size="10.5" fill="var(--ink)" font-weight="700">KOSPI200 ${S.k200}</text></svg>`;
+  const lean = S.f_view === '하방' ? '하방(풋 매수·콜 매도)' : S.f_view === '상방' ? '상방(콜 매수·풋 매도)' : '중립';
+  $('#optcard').insertAdjacentHTML('beforeend', `<div class="sec-h" style="border-top:1px solid var(--line)">행사가별 포지션 — 근월물 ${S.exp} (만기 ${S.exp_date}) <span class="sub">KRX 행사가별 미결제약정(전 투자자) · 진한 막대 = 최근 5일 증가</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="sub">KOSPI200</div><b style="font-size:20px">${S.k200}</b></div>
+      <div class="kpi"><div class="sub">콜벽 (위 저항)</div><b style="font-size:20px">${S.call_wall}</b><div class="sub">${fmt((S.call_wall / S.k200 - 1) * 100, 1)}%</div></div>
+      <div class="kpi"><div class="sub">풋벽 (아래 지지)</div><b style="font-size:20px">${S.put_wall}</b><div class="sub">${fmt((S.put_wall / S.k200 - 1) * 100, 1)}%</div></div>
+      <div class="kpi"><div class="sub">맥스페인 · PCR(OI)</div><b style="font-size:20px">${S.max_pain}</b><div class="sub">PCR ${S.pcr_oi}</div></div>
+      <div class="kpi"><div class="sub">외국인 최근 5일</div><b style="font-size:18px;color:${S.f_view === '하방' ? '#2f6fe0' : S.f_view === '상방' ? '#e0343a' : 'inherit'}">${lean}</b><div class="sub">콜 ${S.f_c5 > 0 ? '+' : ''}${(S.f_c5 || 0).toLocaleString()} · 풋 ${S.f_p5 > 0 ? '+' : ''}${(S.f_p5 || 0).toLocaleString()}계약</div></div>
+    </div>
+    <div class="sub" style="padding:0 20px 6px;line-height:1.7">행사가별 '외국인' 포지션은 KRX 공개 통계에 없어(HTS 전용) 전체 미결제약정 분포 + 외국인 콜·풋 순매수로 판단합니다. 5일 OI 증감: 외가 풋 ${(S.dz.otm_put || 0).toLocaleString()} · 등가 ${(S.dz.atm || 0).toLocaleString()} · 외가 콜 ${(S.dz.otm_call || 0).toLocaleString()}계약</div>
+    <div style="padding:0 16px 18px">${svg}</div>`);
+}
+setTimeout(initOpt);
+// ── 종목 검색 → 종목 분석 화면 (차트·수급·RS·ETF·업종·리포트) ──
+let SIDX = null, sqSel = 0, sqItems = [];
+const getJ = async (k, f) => { if (window[k] !== undefined) return window[k]; try { window[k] = await (await fetch(`${META.charts}/${f}`)).json(); } catch (e) { window[k] = null; } return window[k]; };
+async function initSearch() {
+  if (META.market !== 'KR') return;
+  $('#sqbox').style.display = '';
+  const q = $('#sq'), L = $('#sqlist');
+  const draw = () => {
+    L.innerHTML = sqItems.map(([c, v], i) => `<div data-c="${c}" class="${i === sqSel ? 'on' : ''}"><b>${v[0]}</b> <span class="sub">${c} · ${v[1]} · ${v[2] || ''} · ${v[3]}조${v[4] ? '' : ' · 차트 없음'}</span></div>`).join('') || '<div class="sub">결과 없음</div>';
+    L.style.display = 'block';
+  };
+  q.addEventListener('focus', async () => { SIDX = SIDX || await getJ('_SIDX', 'search_index.json'); });
+  q.addEventListener('input', async () => {
+    SIDX = SIDX || await getJ('_SIDX', 'search_index.json');
+    const s = q.value.trim().toLowerCase();
+    if (!s || !SIDX) { L.style.display = 'none'; return; }
+    sqItems = Object.entries(SIDX).filter(([c, v]) => c.includes(s) || v[0].toLowerCase().includes(s))
+      .sort((a, b) => (b[1][0].toLowerCase().startsWith(s) - a[1][0].toLowerCase().startsWith(s)) || b[1][3] - a[1][3]).slice(0, 15);
+    sqSel = 0; draw();
+  });
+  q.addEventListener('keydown', e => {
+    if (L.style.display !== 'block') return;
+    if (e.key === 'ArrowDown') { sqSel = Math.min(sqSel + 1, sqItems.length - 1); draw(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { sqSel = Math.max(sqSel - 1, 0); draw(); e.preventDefault(); }
+    else if (e.key === 'Enter' && sqItems[sqSel]) openStock(sqItems[sqSel][0]);
+    else if (e.key === 'Escape') L.style.display = 'none';
+  });
+  L.addEventListener('mousedown', e => { const d = e.target.closest('[data-c]'); if (d) openStock(d.dataset.c); });
+  q.addEventListener('blur', () => setTimeout(() => L.style.display = 'none', 150));
+}
+async function openStock(code) {
+  $('#sqlist').style.display = 'none'; $('#sq').value = '';
+  SIDX = SIDX || await getJ('_SIDX', 'search_index.json');
+  const v = (SIDX || {})[code] || [code, '', '', 0, false];
+  const [rsj, etf, ind, rm] = await Promise.all([getJ('_RSJ', 'rs_index.json'), getJ('_ETF', 'etf_exposure.json'), getJ('_IND2', 'industry_topdown.json'), RM ? Promise.resolve(RM) : getJ('_RM', 'report_momentum.json')]);
+  const row = DATA.rows.find(r => r.code === code), rs = rsj && rsj.stocks[code], ef = etf && etf.stocks[code];
+  const iname = ind && ind.stock_industry[code], idd = ind && iname ? ind.industries.find(x => x.industry === iname) : null;
+  const rmx = rm && rm.stocks.find(x => x.code === code);
+  const RGc = {'주도': '#e0343a', '이익 선행': '#c98500', '추세만': '#4f46e5', '소외': '#9aa0aa'}, GC = {A: '#e0343a', B: '#4f46e5', '경고': '#2f6fe0', C: '#9aa0aa'};
+  setView('stock'); scrollTo(0, 0);
+  const sec = (t, body) => `<div><b class="h">${t}</b>${body}</div>`;
+  const rsHtml = rs ? `Mansfield <b class="${rs.mrs > 0 ? 'up' : 'down'}">${rs.mrs > 0 ? '+' : ''}${fmt(rs.mrs, 1)}</b>${rs.mrs_up ? '↑' : '↓'} (vs ${rs.bm}) · RS 등급(12-1) <b>${rs.rating ?? '–'}</b>${rs.rs_hi ? ' · <b>RS 라인 52주 신고가</b>' : ''}<br>지수대비 1M ${fmt(rs.x21, 1)}% · 3M ${fmt(rs.x63, 1)}% · 6M ${fmt(rs.x126, 1)}% · 12M ${fmt(rs.x252, 1)}%${row ? `<br>RS(12M 가중 백분위) ${fmt(row.rs, 0)}` : ''}` : '<span class="sub">데이터 없음</span>';
+  const indHtml = idd ? `<b style="color:${RGc[idd.regime]}">${idd.regime}</b> · ${iname} · 추세 T ${fmt(idd.T, 0)} / 이익 E ${fmt(idd.E, 0)}<br>업종 내 정배열 ${fmt(idd.br_stack, 0)}% · 영업이익 YoY ${idd.op_yoy == null ? '–' : fmt(idd.op_yoy, 0) + '%'} → 컨센 ${idd.op_yoy_cns == null ? '–' : fmt(idd.op_yoy_cns, 0) + '%'}<br><a href="#" onclick="goIndustry('${iname}');return false">업종 차트·구성종목 보기 →</a>` : '<span class="sub">업종 데이터 없음</span>';
+  const etfHtml = ef ? `수혜점수 <b>${fmt(ef.score, 0)}</b> · 보유율 ${fmt(ef.etf_own, 2)}% (${ef.n_etf}개 ETF, 액티브 ${ef.n_active})<br>ETF 순유입 1주 ${fmt(ef.f1w, 1)} / 1개월 ${fmt(ef.f1m, 1)} / 3개월 ${fmt(ef.f3m, 1)} bp` : '<span class="sub">ETF 편입 없음</span>';
+  const repHtml = rmx ? `등급 <b style="color:${GC[rmx.grade]}">${rmx.grade}</b> · 검증점수 v20 <b>${rmx.v20 > 0 ? '+' : ''}${rmx.v20}</b> · 리포트 ${rmx.n20}건 · 서프 ${rmx.beat20}/쇼크 ${rmx.miss20} · TP↑ ${rmx.tp_up20}/↓ ${rmx.tp_dn20}${rmx.react_bad ? ' · <b class="down">좋은 리포트에 주가 하락(경고)</b>' : ''}
+      <div style="margin-top:6px">${(rmx.latest || []).map(r => `<div class="irep"><a href="${r.url}" target="_blank"><span class="sub">${r.date.slice(5)} · ${r.broker} · 점수 ${r.score > 0 ? '+' : ''}${r.score}${r.r0 != null ? ` · 당일 ${r.r0 > 0 ? '+' : ''}${r.r0}%` : ''}</span><br>${r.title}</a></div>`).join('')}</div>` : '<span class="sub">최근 20거래일 리포트 없음</span>';
+  $('#stockcard').innerHTML = `<div class="sec-h" style="flex-wrap:wrap">${v[0]} <span class="sub">${code} · ${v[1]} · ${v[2] || '업종 미분류'} · 시총 ${v[3]}조</span>
+      ${row ? `<span class="tg py">추세 리스트 ${row.template_score}/8 · ${row.stage}</span>` : '<span class="tg">추세 리스트 밖</span>'}
+      ${idd ? `<span class="tg" style="color:${RGc[idd.regime]};border-color:${RGc[idd.regime]}">업종 ${idd.regime}</span>` : ''}${rmx ? `<span class="tg" style="color:${GC[rmx.grade]};border-color:${GC[rmx.grade]}">리포트 ${rmx.grade}</span>` : ''}
+      <span style="margin-left:auto;display:flex;gap:6px">${row ? `<button class="btn" onclick="setView('list');show('${code}').then(()=>document.querySelector('.detailcard').scrollIntoView({block:'start'}))">추세 상세(왜 오르나·매매계획)</button>` : ''}<a class="btn" href="https://m.stock.naver.com/domestic/stock/${code}/total" target="_blank">네이버 ↗</a></span></div>
+    <div id="stitle" class="sub" style="padding:4px 20px 0"></div><div id="schart" style="height:340px;margin:6px 16px 0"></div><div id="szbar" style="padding:6px 20px 0"></div>
+    <div class="skv">
+      ${sec('수급 (태린이아빠 수급오실레이터)', '<div id="sflowtxt" class="sub">불러오는 중…</div>')}
+      ${sec('시장 대비 상대강도', rsHtml)}
+      ${sec('업종 탑다운', indHtml)}
+      ${sec('ETF 수급', etfHtml)}
+      ${sec('리포트 이익 모멘텀 (최근 20거래일)', repHtml)}
+      ${row && row.why ? sec('왜 오르나 (정성 평가)', `<b>${row.why.cluster}</b> · ${row.why.driver || ''}<br><span class="sub">${row.why.why || ''}</span>`) : ''}
+    </div>`;
+  // 내 PC 대시보드 서버(research/chart_server.py)가 있으면: 전 기간 차트를 요청 시 생성 → 종목 상세와 똑같은 차트
+  let full = null;
+  try { const rr = await fetch(`/api/chart/${code}`, {cache: 'no-store'}); if (rr.ok) full = await rr.json(); } catch (e) { full = null; }
+  if (full && full.series && full.series.t) {
+    $('#stitle').outerHTML = `<div class="chartbar"><div class="seg" id="s_tf"><button data-tf="d">일봉</button><button data-tf="w">주봉</button></div><span class="sub" id="s_tfnote"></span><span class="sub" style="margin-left:auto">전 기간 ${full.series.t[0]} ~ · 검색 시 생성(저장 안 함)</span></div>
+      <div id="s_price"></div><div id="s_rsi"></div><div id="s_flowc"></div><div id="s_flowleg" class="sub" style="padding:2px 18px 6px"></div>`;
+    $('#schart').remove();
+    curR = Object.assign({}, full.plan || {}, row || {}); curS = full.series; CH = 's_'; drawChart();
+    $('#s_tf').onclick = e => { const b = e.target.closest('button'); if (!b) return; CH = 's_'; TF = b.dataset.tf; try { localStorage.setItem('tf', TF); } catch (er) {} drawChart(); };
+    const S = full.series, n = S.t.length - 1, P = full.plan || {};
+    const q = k => S[k] ? S[k][n] : null, tag = p => p == null ? '–' : `<b style="color:${p <= 25 ? '#2f6fe0' : p >= 75 ? '#e0343a' : 'inherit'}">P${fmt(p, 0)}</b>`;
+    $('#szbar').innerHTML = zbar(q('qs')) + '<div class="sub" style="display:flex;justify-content:space-between"><span>P0 바텀권</span><span>P25</span><span>P50</span><span>P75</span><span>과열권 P100</span></div>';
+    $('#sflowtxt').innerHTML = `현재 수급 위치(60일): 외+기 ${tag(q('qs'))} · 외국인 ${tag(q('qf'))} · 기관 ${tag(q('qo'))}<br>${q('qs') == null ? '' : q('qs') <= 25 ? '바텀권 — 최근 외+기가 비워진 상태. 추세가 살아 있으면 재매수 후보' : q('qs') >= 75 ? '과열권 — 외+기가 최근 강하게 채운 상태' : '중립 구간'}`
+      + (P.stop ? `<br><span class="sub">매매계획(참고): 손절 ${fmtp(P.stop, 0)} · 1R/2R/3R ${fmtp(P.r1, 0)}/${fmtp(P.r2, 0)}/${fmtp(P.r3, 0)} · 트레일링 ${fmtp(P.trail, 0)} · 단계 ${P.stage || '–'} · 템플릿 ${P.template_score ?? '–'}/8</span>` : '');
+    return;
+  }
+  if (!v[4]) { $('#sflowtxt').innerHTML = '<span class="sub">시총 500억 미만 등으로 수급 차트 데이터 없음 — 네이버에서 확인</span>'; $('#schart').style.display = 'none'; return; }
+  let d = FCACHE[code];
+  if (!d) { try { d = FCACHE[code] = await (await fetch(`${META.charts}/flow/${code}.json`)).json(); } catch (e) { $('#sflowtxt').textContent = '차트 데이터를 불러오지 못했습니다'; return; } }
+  const n = d.t.length - 1;
+  const ch = LightweightCharts.createChart($('#schart'), {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
+    grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, autoSize: true, leftPriceScale: {visible: true, borderVisible: false}, rightPriceScale: {borderVisible: false, scaleMargins: {top: 0.65, bottom: 0}}});
+  ch.addLineSeries({color: css('--ink'), lineWidth: 2, priceScaleId: 'left', priceLineVisible: false, title: '주가'}).setData(d.t.map((t, i) => d.c[i] == null ? null : {time: t, value: d.c[i]}).filter(Boolean));
+  const hs = ch.addHistogramSeries({priceScaleId: 'right', priceLineVisible: false, title: '수급오실레이터(외+기, bp)', priceFormat: {type: 'price', precision: 2, minMove: 0.01}});
+  hs.setData(d.t.map((t, i) => d.ts && d.ts[i] != null ? {time: t, value: d.ts[i] * 1e4, color: d.ts[i] >= 0 ? '#e0343a' : '#2f6fe0'} : null).filter(Boolean));
+  ch.timeScale().fitContent();
+  const qs = d.qs ? d.qs[n] : null, qf = d.qf ? d.qf[n] : null, qo = d.qo ? d.qo[n] : null;
+  $('#stitle').innerHTML = `━ 주가(왼쪽) · ▮ 수급오실레이터 = (외+기 5일 순매수÷시총)의 MACD(12,26,9) 히스토그램 (빨강 매수 우위/파랑 매도 우위) · 최근 ${d.t.length}거래일`;
+  $('#szbar').innerHTML = zbar(qs) + '<div class="sub" style="display:flex;justify-content:space-between"><span>P0 바텀권</span><span>P25</span><span>P50</span><span>P75</span><span>과열권 P100</span></div>';
+  const tag = p => p == null ? '–' : `<b style="color:${p <= 25 ? '#2f6fe0' : p >= 75 ? '#e0343a' : 'inherit'}">P${fmt(p, 0)}</b>`;
+  $('#sflowtxt').innerHTML = `현재 수급 위치(60일): 외+기 ${tag(qs)} · 외국인 ${tag(qf)} · 기관 ${tag(qo)}<br>${qs == null ? '' : qs <= 25 ? '바텀권 — 최근 외+기가 비워진 상태. 추세가 살아 있으면 재매수 후보' : qs >= 75 ? '과열권 — 외+기가 최근 강하게 채운 상태' : '중립 구간'}${row && row.pct_f != null ? `<br><span class="sub">추세 판정용(백테스트) 외국인 20일 백분위 P${fmt(row.pct_f, 0)}</span>` : ''}`;
+}
+setTimeout(initSearch);
+
 
 // ---- view switching & detail tabs ----
 let VIEW = 'sum';
@@ -599,7 +749,7 @@ function setView(v) {
   VIEW = v; document.querySelectorAll('.view').forEach(x => x.classList.toggle('on', x.id === 'v-' + v));
   document.querySelectorAll('#vtabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   try { localStorage.setItem('view', v); history.replaceState(null, '', '#' + v); } catch (e) {}
-  if (v === 'list' && curR) setTimeout(drawChart, 30);
+  if (v === 'list' && LIST_R) { CH = ''; curR = LIST_R; curS = LIST_S; setTimeout(drawChart, 30); }
   if (v === 'flow' && typeof drawSF === 'function') setTimeout(drawSF, 30);
   window.scrollTo({top: 0});
 }
@@ -708,19 +858,21 @@ $('#body').onclick = async e => {
 
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let pc, rc, fc;
+let CH = '';  // 차트를 그릴 위치 접두어: '' = 종목 상세, 's_' = 검색 종목 화면
+const Q = id => document.getElementById(CH + id);
 function makeCharts() {
   const base = {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
     grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, rightPriceScale: {borderVisible: false},
     crosshair: {mode: 0}};
-  $('#price').innerHTML = ''; $('#rsi').innerHTML = ''; $('#flowc').innerHTML = ''; fc = null;
-  pc = LightweightCharts.createChart($('#price'), {...base, autoSize: true, timeScale: {visible: false}});
-  rc = LightweightCharts.createChart($('#rsi'), {...base, autoSize: true, timeScale: {borderVisible: false}});
+  Q('price').innerHTML = ''; Q('rsi').innerHTML = ''; Q('flowc').innerHTML = ''; fc = null;
+  pc = LightweightCharts.createChart(Q('price'), {...base, autoSize: true, timeScale: {visible: false}});
+  rc = LightweightCharts.createChart(Q('rsi'), {...base, autoSize: true, timeScale: {borderVisible: false}});
   pc.timeScale().subscribeVisibleLogicalRangeChange(r => r && rc.timeScale().setVisibleLogicalRange(r));
   rc.timeScale().subscribeVisibleLogicalRangeChange(r => r && pc.timeScale().setVisibleLogicalRange(r));
 }
 function drawFlow(s, base) {
-  const el = $('#flowc');
-  if (!s.pf && !s.ts) { el.classList.remove('on'); $('#flowleg').innerHTML = ''; return; }
+  const el = Q('flowc');
+  if (!s.pf && !s.ts) { el.classList.remove('on'); Q('flowleg').innerHTML = ''; return; }
   el.classList.add('on');
   fc = LightweightCharts.createChart(el, {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
     grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, rightPriceScale: {borderVisible: false}, crosshair: {mode: 0},
@@ -738,7 +890,7 @@ function drawFlow(s, base) {
   }
   [pc, rc].forEach(ch => ch.timeScale().subscribeVisibleLogicalRangeChange(r => r && fc && fc.timeScale().setVisibleLogicalRange(r)));
   const qn = s.qs ? s.qs[s.qs.length - 1] : null;
-  $('#flowleg').innerHTML = (s.us_flow ? `수급 오실레이터(미국, 가격·거래량 기반) = (장중 위치 60% + 등락 40%) × 회전율의 5일 합 → MACD(12,26,10) 히스토그램` : `수급오실레이터(외+기) = (5일 순매수÷시총)의 MACD(12,26,9) 히스토그램`) + ` · <b style="color:#e0343a">▮ 매수 우위</b> / <b style="color:#2f6fe0">▮ 매도 우위</b>${qn != null ? ` · 현재 수급 위치 <b>P${fmt(qn, 0)}</b> (${s.us_flow ? 252 : 60}일)` : ''}`;
+  Q('flowleg').innerHTML = (s.us_flow ? `수급 오실레이터(미국, 가격·거래량 기반) = (장중 위치 60% + 등락 40%) × 회전율의 5일 합 → MACD(12,26,10) 히스토그램` : `수급오실레이터(외+기) = (5일 순매수÷시총)의 MACD(12,26,9) 히스토그램`) + ` · <b style="color:#e0343a">▮ 매수 우위</b> / <b style="color:#2f6fe0">▮ 매도 우위</b>${qn != null ? ` · 현재 수급 위치 <b>P${fmt(qn, 0)}</b> (${s.us_flow ? 252 : 60}일)` : ''}`;
 }
 const sma = (c, n) => c.map((_, i) => i < n - 1 ? null : c.slice(i - n + 1, i + 1).reduce((a, b) => a + b, 0) / n);
 const ema = (c, n) => { const k = 2 / (n + 1); let e = c[0]; return c.map((x, i) => (e = i ? x * k + e * (1 - k) : x)); };
@@ -794,7 +946,7 @@ function drawLines(chart, cs, L) {
 }
 const patternTxt = s => (s.lines?.patterns || []).map(p => `<span class="badge ${/확정|상단 돌파/.test(p.status) ? 'ok' : ''}">${p.name} · ${p.status}</span> <span class="sub">${p.bias}${p.vol_contracting ? ' · 수렴 중 거래량 감소 ✓' : ''}</span>`).join('<br>') || '감지된 패턴 없음';
 
-let TF = 'd', curR = null, curS = null;
+let TF = 'd', curR = null, curS = null, LIST_R = null, LIST_S = null;
 try { TF = localStorage.getItem('tf') || 'd'; } catch (e) {}
 function toWeekly(s) {
   const out = {t: [], o: [], h: [], l: [], c: [], v: []}; let key = null;
@@ -818,8 +970,8 @@ function drawChart() {
   const r = curR, s0 = curS; if (!r || !s0) return;
   const W = TF === 'w', s = W ? toWeekly(s0) : s0;
   const up = css('--up'), dn = css('--down');
-  document.querySelectorAll('#tf button').forEach(b => b.classList.toggle('on', b.dataset.tf === TF));
-  $('#tfnote').textContent = W ? '주봉 · 10주(≈50일)·30주(와인스타인 기준선)·40주(≈200일) 이평 · 수평 지지/저항만 표시' : '일봉 · EMA21·50·150·200일선 · 채널·추세선·패턴 표시';
+  document.querySelectorAll(`#${CH}tf button`).forEach(b => b.classList.toggle('on', b.dataset.tf === TF));
+  Q('tfnote').textContent = W ? '주봉 · 10주(≈50일)·30주(와인스타인 기준선)·40주(≈200일) 이평 · 수평 지지/저항만 표시' : '일봉 · EMA21·50·150·200일선 · 채널·추세선·패턴 표시';
   makeCharts();
   const t = s.t;
   const cs = pc.addCandlestickSeries({upColor: up, downColor: dn, borderVisible: false, wickUpColor: up, wickDownColor: dn});
@@ -831,8 +983,8 @@ function drawChart() {
     .setData(t.map((d, i) => vals[i] == null ? null : {time: d, value: vals[i]}).filter(Boolean));
   if (W) { line(sma(s.c, 10), '#eda100', 2); line(sma(s.c, 30), '#8e6bd6', 2); line(sma(s.c, 40), '#d23f31'); }
   else { line(ema(s.c, 21), '#2a78d6'); line(sma(s.c, 50), '#eda100', 2); line(sma(s.c, 150), '#8e6bd6'); line(sma(s.c, 200), '#d23f31'); }
-  cs.createPriceLine({price: r.target, color: up, lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: '목표'});
-  cs.createPriceLine({price: r.stop, color: dn, lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: '손절(-1R)'});
+  if (r.target) cs.createPriceLine({price: r.target, color: up, lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: '목표'});
+  if (r.stop) cs.createPriceLine({price: r.stop, color: dn, lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: '손절(-1R)'});
   if (r.r2) cs.createPriceLine({price: r.r2, color: up, lineStyle: 3, lineWidth: 1, axisLabelVisible: true, title: '2R'});
   if (r.r3) cs.createPriceLine({price: r.r3, color: up, lineStyle: 3, lineWidth: 1, axisLabelVisible: true, title: '3R'});
   if (r.trail) cs.createPriceLine({price: r.trail, color: '#f08c00', lineStyle: 1, lineWidth: 2, axisLabelVisible: true, title: '트레일링'});
@@ -844,9 +996,10 @@ function drawChart() {
   rs.applyOptions({autoscaleInfoProvider: () => ({priceRange: {minValue: 10, maxValue: 90}})});
   drawFlow(s);
   const n = t.length;
-  requestAnimationFrame(() => { pc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); rc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); if (fc) fc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); });
+  const P_ = pc, R_ = rc, F_ = fc, rng = {from: n - (W ? 104 : 180), to: n + 3};  // 이 차트 묶음만 (다른 화면 차트와 전역 변수 공유 방지)
+  requestAnimationFrame(() => { P_.timeScale().setVisibleLogicalRange(rng); R_.timeScale().setVisibleLogicalRange(rng); if (F_) F_.timeScale().setVisibleLogicalRange(rng); });
 }
-$('#tf').onclick = e => { const b = e.target.closest('button'); if (!b) return; TF = b.dataset.tf; try { localStorage.setItem('tf', TF); } catch (e) {} drawChart(); };
+$('#tf').onclick = e => { const b = e.target.closest('button'); if (!b) return; CH = ''; TF = b.dataset.tf; try { localStorage.setItem('tf', TF); } catch (e) {} drawChart(); };
 async function show(code) {
   selected = code; render();
   const r = DATA.rows.find(x => x.code === code);
@@ -882,6 +1035,8 @@ async function show(code) {
       ${kv('거래량 5일÷50일', `${fmt(r.vol_ratio_5_50, 2)}${r.vol_dry ? ' ✓ 감소' : ''}`)}
       ${r.pct_f != null ? `<div class="kv" style="cursor:pointer" onclick="openStockFlow('${r.code}')"><span>수급 오실레이터 차트</span><b style="color:var(--acc)">열기 ↗</b></div>` : ''}
       ${r.pct_f != null ? kv('외국인 / 기관 수급 위치 (P, 4개월)', `P${fmt(r.pct_f, 0)} / P${fmt(r.pct_o, 0)}${r.pct_f <= 25 ? ' · 외국인 바텀권' : r.pct_f >= 75 ? ' · 외국인 과열권' : ''}`) : ''}
+      ${r.trig_pos ? kv('트리거 겹침 (깡토: 신호가 많이 모일수록 확률↑)', `<b>${r.trig_score}</b> = ＋${r.trig_pos.length} −${(r.trig_neg || []).length}<br>＋ ${r.trig_pos.join(' · ') || '없음'}${r.trig_neg && r.trig_neg.length ? `<br><span class="down">− ${r.trig_neg.join(' · ')}</span>` : ''}`) : ''}
+      ${r.rs12 != null ? kv('기간별 RS (12M→6M→3M→1M 백분위)', `${fmt(r.rs12, 0)} → ${fmt(r.rs6, 0)} → ${fmt(r.rs3, 0)} → ${fmt(r.rs1, 0)}${r.rs_reaccel ? ' · <b>재가속(상승→조정 베이스→재상승) — 깡토가 꼽은 가장 좋은 모양</b>' : ''} · 시장 RS 허들 ${fmt(r.rs_hurdle, 0)} ${r.rs_above_mkt ? '<b class="up">통과</b>' : '<b class="down">미달</b>'}`) : ''}
       ${r.rsx ? kv(`지수 대비 상대강도 (vs ${r.rsx.bm})`, `Mansfield <b style="color:${r.rsx.mrs > 0 ? 'var(--up)' : 'var(--down)'}">${r.rsx.mrs > 0 ? '+' : ''}${fmt(r.rsx.mrs, 1)}</b>${r.rsx.mrs_up ? '↑' : '↓'} · RS 등급(12-1) <b>${r.rsx.rating ?? '–'}</b>${r.rsx.rs_hi ? ' · <b>RS 라인 52주 신고가</b>' : ''} · 초과수익 1개월 ${fmt(r.rsx.x21, 1)}% / 3개월 ${fmt(r.rsx.x63, 1)}% / 6개월 ${fmt(r.rsx.x126, 1)}% / 12개월 ${fmt(r.rsx.x252, 1)}%${r.rsx.mrs <= 0 ? ' · ⚠ 지수보다 약함 — 백테스트상 추세 종목 중 최악(60일 −15.8%)' : ''}`) : ''}
       ${r.ind_regime ? kv('업종 탑다운 (업종 자체의 추세·이익)', `<b>${r.ind_regime}</b> · ${r.industry} · 추세 T ${fmt(r.ind_T, 0)} / 이익 E ${fmt(r.ind_E, 0)} · 업종 내 정배열 ${fmt(r.ind_br, 0)}%${r.ind_decel ? ' · ⚠ 이익 증가율 둔화' : ''}${r.ind_regime === '소외' ? ' · 업종 역풍 — 백테스트상 개별 추세 성과 낮음' : r.ind_regime === '주도' ? ' · 업종이 받쳐 주는 추세' : ''}`) : ''}
       ${r.etf ? kv('ETF 수급 (국내 ETF 전체 구성종목)', `<span title="ETF 수혜점수 = 시총 대비 ETF 보유율 백분위 50% + 1개월 ETF 순유입 압력 백분위 50%">수혜점수 ${fmt(r.etf.score, 0)}</span> · 보유율 ${fmt(r.etf.etf_own, 2)}% (${r.etf.n_etf}개 ETF, 액티브 ${r.etf.n_active}개 ${fmt(r.etf.act_own, 2)}%) · 순유입 1주 ${fmt(r.etf.f1w, 1)} / 1개월 ${fmt(r.etf.f1m, 1)} / 3개월 ${fmt(r.etf.f3m, 1)}bp`) : ''}
@@ -900,7 +1055,8 @@ async function show(code) {
       ${kv('조정 하락일÷상승일 거래량', `${fmt(r.pull_vs_adv_vol, 2)}${r.weak_selling ? ' ✓' : ''}`)}</div></div>`;
   const gs = [...$('#metrics').querySelectorAll(':scope > .mgroup')];
   $('#p-plan').replaceChildren(...gs.slice(0, 1)); $('#p-ind').replaceChildren(...gs.slice(1));
-  curR = r; curS = s; drawChart();
+  LIST_R = r; LIST_S = s;
+  if (VIEW !== 'stock') { CH = ''; curR = r; curS = s; drawChart(); }
 }
 render();
 const first = filtered()[0]; if (first) show(first.code);

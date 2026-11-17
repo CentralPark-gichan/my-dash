@@ -75,7 +75,7 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}tbody tr.sel{back
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:12px 0}
 .kv{background:var(--hover);border-radius:10px;padding:9px 11px}.kv span{display:block;color:var(--muted);font-size:11px}.kv b{font-weight:650;font-size:13px}
 .checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-#price{height:400px}#rsi{height:120px;border-top:1px solid var(--line)}#flowc{height:0;border-top:1px solid var(--line)}#flowc.on{height:130px}
+#price,#s_price{height:400px}#rsi,#s_rsi{height:120px;border-top:1px solid var(--line)}#flowc,#s_flowc{height:0;border-top:1px solid var(--line)}#flowc.on,#s_flowc.on{height:130px}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--muted);margin:6px 0}
 .legend i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:4px}
 .why{margin-top:14px;border:1px solid var(--acc);border-radius:12px;padding:12px 14px;background:linear-gradient(0deg,var(--panel),var(--acc-soft))}
@@ -705,6 +705,22 @@ async function openStock(code) {
       ${sec('리포트 이익 모멘텀 (최근 20거래일)', repHtml)}
       ${row && row.why ? sec('왜 오르나 (정성 평가)', `<b>${row.why.cluster}</b> · ${row.why.driver || ''}<br><span class="sub">${row.why.why || ''}</span>`) : ''}
     </div>`;
+  // 내 PC 대시보드 서버(research/chart_server.py)가 있으면: 전 기간 차트를 요청 시 생성 → 종목 상세와 똑같은 차트
+  let full = null;
+  try { const rr = await fetch(`/api/chart/${code}`, {cache: 'no-store'}); if (rr.ok) full = await rr.json(); } catch (e) { full = null; }
+  if (full && full.series && full.series.t) {
+    $('#stitle').outerHTML = `<div class="chartbar"><div class="seg" id="s_tf"><button data-tf="d">일봉</button><button data-tf="w">주봉</button></div><span class="sub" id="s_tfnote"></span><span class="sub" style="margin-left:auto">전 기간 ${full.series.t[0]} ~ · 검색 시 생성(저장 안 함)</span></div>
+      <div id="s_price"></div><div id="s_rsi"></div><div id="s_flowc"></div><div id="s_flowleg" class="sub" style="padding:2px 18px 6px"></div>`;
+    $('#schart').remove();
+    curR = Object.assign({}, full.plan || {}, row || {}); curS = full.series; CH = 's_'; drawChart();
+    $('#s_tf').onclick = e => { const b = e.target.closest('button'); if (!b) return; CH = 's_'; TF = b.dataset.tf; try { localStorage.setItem('tf', TF); } catch (er) {} drawChart(); };
+    const S = full.series, n = S.t.length - 1, P = full.plan || {};
+    const q = k => S[k] ? S[k][n] : null, tag = p => p == null ? '–' : `<b style="color:${p <= 25 ? '#2f6fe0' : p >= 75 ? '#e0343a' : 'inherit'}">P${fmt(p, 0)}</b>`;
+    $('#szbar').innerHTML = zbar(q('qs')) + '<div class="sub" style="display:flex;justify-content:space-between"><span>P0 바텀권</span><span>P25</span><span>P50</span><span>P75</span><span>과열권 P100</span></div>';
+    $('#sflowtxt').innerHTML = `현재 수급 위치(60일): 외+기 ${tag(q('qs'))} · 외국인 ${tag(q('qf'))} · 기관 ${tag(q('qo'))}<br>${q('qs') == null ? '' : q('qs') <= 25 ? '바텀권 — 최근 외+기가 비워진 상태. 추세가 살아 있으면 재매수 후보' : q('qs') >= 75 ? '과열권 — 외+기가 최근 강하게 채운 상태' : '중립 구간'}`
+      + (P.stop ? `<br><span class="sub">매매계획(참고): 손절 ${fmtp(P.stop, 0)} · 1R/2R/3R ${fmtp(P.r1, 0)}/${fmtp(P.r2, 0)}/${fmtp(P.r3, 0)} · 트레일링 ${fmtp(P.trail, 0)} · 단계 ${P.stage || '–'} · 템플릿 ${P.template_score ?? '–'}/8</span>` : '');
+    return;
+  }
   if (!v[4]) { $('#sflowtxt').innerHTML = '<span class="sub">시총 500억 미만 등으로 수급 차트 데이터 없음 — 네이버에서 확인</span>'; $('#schart').style.display = 'none'; return; }
   let d = FCACHE[code];
   if (!d) { try { d = FCACHE[code] = await (await fetch(`${META.charts}/flow/${code}.json`)).json(); } catch (e) { $('#sflowtxt').textContent = '차트 데이터를 불러오지 못했습니다'; return; } }
@@ -733,7 +749,7 @@ function setView(v) {
   VIEW = v; document.querySelectorAll('.view').forEach(x => x.classList.toggle('on', x.id === 'v-' + v));
   document.querySelectorAll('#vtabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   try { localStorage.setItem('view', v); history.replaceState(null, '', '#' + v); } catch (e) {}
-  if (v === 'list' && curR) setTimeout(drawChart, 30);
+  if (v === 'list' && LIST_R) { CH = ''; curR = LIST_R; curS = LIST_S; setTimeout(drawChart, 30); }
   if (v === 'flow' && typeof drawSF === 'function') setTimeout(drawSF, 30);
   window.scrollTo({top: 0});
 }
@@ -842,19 +858,21 @@ $('#body').onclick = async e => {
 
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let pc, rc, fc;
+let CH = '';  // 차트를 그릴 위치 접두어: '' = 종목 상세, 's_' = 검색 종목 화면
+const Q = id => document.getElementById(CH + id);
 function makeCharts() {
   const base = {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
     grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, rightPriceScale: {borderVisible: false},
     crosshair: {mode: 0}};
-  $('#price').innerHTML = ''; $('#rsi').innerHTML = ''; $('#flowc').innerHTML = ''; fc = null;
-  pc = LightweightCharts.createChart($('#price'), {...base, autoSize: true, timeScale: {visible: false}});
-  rc = LightweightCharts.createChart($('#rsi'), {...base, autoSize: true, timeScale: {borderVisible: false}});
+  Q('price').innerHTML = ''; Q('rsi').innerHTML = ''; Q('flowc').innerHTML = ''; fc = null;
+  pc = LightweightCharts.createChart(Q('price'), {...base, autoSize: true, timeScale: {visible: false}});
+  rc = LightweightCharts.createChart(Q('rsi'), {...base, autoSize: true, timeScale: {borderVisible: false}});
   pc.timeScale().subscribeVisibleLogicalRangeChange(r => r && rc.timeScale().setVisibleLogicalRange(r));
   rc.timeScale().subscribeVisibleLogicalRangeChange(r => r && pc.timeScale().setVisibleLogicalRange(r));
 }
 function drawFlow(s, base) {
-  const el = $('#flowc');
-  if (!s.pf && !s.ts) { el.classList.remove('on'); $('#flowleg').innerHTML = ''; return; }
+  const el = Q('flowc');
+  if (!s.pf && !s.ts) { el.classList.remove('on'); Q('flowleg').innerHTML = ''; return; }
   el.classList.add('on');
   fc = LightweightCharts.createChart(el, {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
     grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, rightPriceScale: {borderVisible: false}, crosshair: {mode: 0},
@@ -872,7 +890,7 @@ function drawFlow(s, base) {
   }
   [pc, rc].forEach(ch => ch.timeScale().subscribeVisibleLogicalRangeChange(r => r && fc && fc.timeScale().setVisibleLogicalRange(r)));
   const qn = s.qs ? s.qs[s.qs.length - 1] : null;
-  $('#flowleg').innerHTML = (s.us_flow ? `수급 오실레이터(미국, 가격·거래량 기반) = (장중 위치 60% + 등락 40%) × 회전율의 5일 합 → MACD(12,26,10) 히스토그램` : `수급오실레이터(외+기) = (5일 순매수÷시총)의 MACD(12,26,9) 히스토그램`) + ` · <b style="color:#e0343a">▮ 매수 우위</b> / <b style="color:#2f6fe0">▮ 매도 우위</b>${qn != null ? ` · 현재 수급 위치 <b>P${fmt(qn, 0)}</b> (${s.us_flow ? 252 : 60}일)` : ''}`;
+  Q('flowleg').innerHTML = (s.us_flow ? `수급 오실레이터(미국, 가격·거래량 기반) = (장중 위치 60% + 등락 40%) × 회전율의 5일 합 → MACD(12,26,10) 히스토그램` : `수급오실레이터(외+기) = (5일 순매수÷시총)의 MACD(12,26,9) 히스토그램`) + ` · <b style="color:#e0343a">▮ 매수 우위</b> / <b style="color:#2f6fe0">▮ 매도 우위</b>${qn != null ? ` · 현재 수급 위치 <b>P${fmt(qn, 0)}</b> (${s.us_flow ? 252 : 60}일)` : ''}`;
 }
 const sma = (c, n) => c.map((_, i) => i < n - 1 ? null : c.slice(i - n + 1, i + 1).reduce((a, b) => a + b, 0) / n);
 const ema = (c, n) => { const k = 2 / (n + 1); let e = c[0]; return c.map((x, i) => (e = i ? x * k + e * (1 - k) : x)); };
@@ -928,7 +946,7 @@ function drawLines(chart, cs, L) {
 }
 const patternTxt = s => (s.lines?.patterns || []).map(p => `<span class="badge ${/확정|상단 돌파/.test(p.status) ? 'ok' : ''}">${p.name} · ${p.status}</span> <span class="sub">${p.bias}${p.vol_contracting ? ' · 수렴 중 거래량 감소 ✓' : ''}</span>`).join('<br>') || '감지된 패턴 없음';
 
-let TF = 'd', curR = null, curS = null;
+let TF = 'd', curR = null, curS = null, LIST_R = null, LIST_S = null;
 try { TF = localStorage.getItem('tf') || 'd'; } catch (e) {}
 function toWeekly(s) {
   const out = {t: [], o: [], h: [], l: [], c: [], v: []}; let key = null;
@@ -952,8 +970,8 @@ function drawChart() {
   const r = curR, s0 = curS; if (!r || !s0) return;
   const W = TF === 'w', s = W ? toWeekly(s0) : s0;
   const up = css('--up'), dn = css('--down');
-  document.querySelectorAll('#tf button').forEach(b => b.classList.toggle('on', b.dataset.tf === TF));
-  $('#tfnote').textContent = W ? '주봉 · 10주(≈50일)·30주(와인스타인 기준선)·40주(≈200일) 이평 · 수평 지지/저항만 표시' : '일봉 · EMA21·50·150·200일선 · 채널·추세선·패턴 표시';
+  document.querySelectorAll(`#${CH}tf button`).forEach(b => b.classList.toggle('on', b.dataset.tf === TF));
+  Q('tfnote').textContent = W ? '주봉 · 10주(≈50일)·30주(와인스타인 기준선)·40주(≈200일) 이평 · 수평 지지/저항만 표시' : '일봉 · EMA21·50·150·200일선 · 채널·추세선·패턴 표시';
   makeCharts();
   const t = s.t;
   const cs = pc.addCandlestickSeries({upColor: up, downColor: dn, borderVisible: false, wickUpColor: up, wickDownColor: dn});
@@ -965,8 +983,8 @@ function drawChart() {
     .setData(t.map((d, i) => vals[i] == null ? null : {time: d, value: vals[i]}).filter(Boolean));
   if (W) { line(sma(s.c, 10), '#eda100', 2); line(sma(s.c, 30), '#8e6bd6', 2); line(sma(s.c, 40), '#d23f31'); }
   else { line(ema(s.c, 21), '#2a78d6'); line(sma(s.c, 50), '#eda100', 2); line(sma(s.c, 150), '#8e6bd6'); line(sma(s.c, 200), '#d23f31'); }
-  cs.createPriceLine({price: r.target, color: up, lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: '목표'});
-  cs.createPriceLine({price: r.stop, color: dn, lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: '손절(-1R)'});
+  if (r.target) cs.createPriceLine({price: r.target, color: up, lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: '목표'});
+  if (r.stop) cs.createPriceLine({price: r.stop, color: dn, lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: '손절(-1R)'});
   if (r.r2) cs.createPriceLine({price: r.r2, color: up, lineStyle: 3, lineWidth: 1, axisLabelVisible: true, title: '2R'});
   if (r.r3) cs.createPriceLine({price: r.r3, color: up, lineStyle: 3, lineWidth: 1, axisLabelVisible: true, title: '3R'});
   if (r.trail) cs.createPriceLine({price: r.trail, color: '#f08c00', lineStyle: 1, lineWidth: 2, axisLabelVisible: true, title: '트레일링'});
@@ -978,9 +996,10 @@ function drawChart() {
   rs.applyOptions({autoscaleInfoProvider: () => ({priceRange: {minValue: 10, maxValue: 90}})});
   drawFlow(s);
   const n = t.length;
-  requestAnimationFrame(() => { pc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); rc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); if (fc) fc.timeScale().setVisibleLogicalRange({from: n - (W ? 104 : 180), to: n + 3}); });
+  const P_ = pc, R_ = rc, F_ = fc, rng = {from: n - (W ? 104 : 180), to: n + 3};  // 이 차트 묶음만 (다른 화면 차트와 전역 변수 공유 방지)
+  requestAnimationFrame(() => { P_.timeScale().setVisibleLogicalRange(rng); R_.timeScale().setVisibleLogicalRange(rng); if (F_) F_.timeScale().setVisibleLogicalRange(rng); });
 }
-$('#tf').onclick = e => { const b = e.target.closest('button'); if (!b) return; TF = b.dataset.tf; try { localStorage.setItem('tf', TF); } catch (e) {} drawChart(); };
+$('#tf').onclick = e => { const b = e.target.closest('button'); if (!b) return; CH = ''; TF = b.dataset.tf; try { localStorage.setItem('tf', TF); } catch (e) {} drawChart(); };
 async function show(code) {
   selected = code; render();
   const r = DATA.rows.find(x => x.code === code);
@@ -1036,7 +1055,8 @@ async function show(code) {
       ${kv('조정 하락일÷상승일 거래량', `${fmt(r.pull_vs_adv_vol, 2)}${r.weak_selling ? ' ✓' : ''}`)}</div></div>`;
   const gs = [...$('#metrics').querySelectorAll(':scope > .mgroup')];
   $('#p-plan').replaceChildren(...gs.slice(0, 1)); $('#p-ind').replaceChildren(...gs.slice(1));
-  curR = r; curS = s; drawChart();
+  LIST_R = r; LIST_S = s;
+  if (VIEW !== 'stock') { CH = ''; curR = r; curS = s; drawChart(); }
 }
 render();
 const first = filtered()[0]; if (first) show(first.code);
