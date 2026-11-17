@@ -219,6 +219,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <div class="pagehead"><h1 id="ttl">미국 추세·눌림목</h1><div class="vtabs" id="vtabs"><button data-v="sum" class="on">오늘의 판단</button><button data-v="list">종목</button><button data-v="flow" id="vtFlow">수급</button></div><div class="mstrip" id="mstrip"></div></div>
   <div class="view on" id="v-sum">
   <section class="card"><div class="sec-h"><span class="dot"></span>오늘의 시장 <span class="sub">시장 방향(M)</span></div><div id="market"></div></section>
+  <section class="card" id="indcard" style="display:none"></section>
   <section class="card" id="rmcard" style="display:none"></section>
   <div id="overview" style="display:contents"></div>
   </div>
@@ -286,7 +287,7 @@ document.title = META.title;
   $('#market').innerHTML = `<div class="kpis">${k('200일선 위 종목', m.above200 + '%', m.above200)}${k('50일선 위 종목', m.above50 + '%', m.above50)}${k('트렌드 템플릿 통과', m.template_pct + '%', m.template_pct * 5)}${k('동일가중 지수 (와인스타인)', m.ew_stage + '단계 <span class="sub">고점 대비 ' + m.ew_from_high + '%</span>')}</div>
     <div class="regime ${weak ? 'warn' : 'ok'}">${weak ? '약세 국면 — 시장이 약하면 주도주도 함께 하락. 비중 축소·신규 진입 신중 (백테스트: 약세장 눌림 매수 20일 -0.7%)' : '우호적 국면 — 눌림목 매수 유효'}</div>`; }
 let tab = 'pull', sortKey = 'pull_score', sortDir = -1, selected = null;
-const COLS = [['symbol','종목'],['why_rank','상승 이유'],['stage','단계'],['close','종가'],['pct','등락'],['rs','RS'],['pull_score','눌림점수'],['depth_pct','고점대비%'],['support','지지선'],['pct_f','외인 수급 P'],['etf_score','ETF 수급'],
+const COLS = [['symbol','종목'],['why_rank','상승 이유'],['ind_T','업종 판정'],['stage','단계'],['close','종가'],['pct','등락'],['rs','RS'],['pull_score','눌림점수'],['depth_pct','고점대비%'],['support','지지선'],['pct_f','외인 수급 P'],['etf_score','ETF 수급'],
   ['retrace_pct','되돌림%',1],['vol_ratio_5_50','거래량비',1],['rsi','RSI',1],['weinstein','W단계',1],['template_score','템플릿',1],['mktcap_b','시총',1],['industry','업종',1]];
 const EXCOLS = [['symbol','종목'],['exit_severity','이탈 강도'],['exit_days','이탈일'],['since_exit_pct','이탈 후'],['exit_heavy','대량거래'],['exit_lost','이탈 계기'],
   ['template_score','템플릿'],['exit_vs50','50일선 대비'],['exit_vs200','200일선 대비'],['rs','RS'],['why_rank','이전 상승 이유'],['industry','업종']];
@@ -358,12 +359,13 @@ function render() {
   $('#body').innerHTML = rows.map(r => `<tr data-c="${r.code}" class="${selected === r.code ? 'sel' : ''}">
     <td class="nm">${isKR ? `<b>${r.name}</b> <span class="sub">${r.symbol}</span>` : `<b>${r.symbol}</b> <span class="sub">${r.name || ''}</span>`}${r.leader ? `<span class="tg ld" title="사업상 대장: ${r.leader}">대장</span>` : ''}${r.pyramid ? `<span class="tg py" title="${r.pyramid}">불타기</span>` : ''}${r.below_trail && !r.exited ? '<span class="tg tr" title="트레일링 스톱 아래">트레일 이탈</span>' : ''}</td>
     <td style="text-align:left">${r.why ? `<span class="cltag" title="${r.why.why}"><span class="dur ${DUR_DOT(r.why.durability)}"></span>${r.why.cluster}</span>` : '<span class="sub">–</span>'}</td>
+    <td style="text-align:left">${r.ind_regime ? (c => `<span class="tg" style="color:${c};border-color:${c}" title="${r.industry} 업종 — 추세 T ${fmt(r.ind_T, 0)} / 이익 E ${fmt(r.ind_E, 0)} / 정배열 폭 ${fmt(r.ind_br, 0)}%${r.ind_decel ? ' · 이익 증가율 둔화' : ''}">${r.ind_regime}</span> <span class="sub">${fmt(r.ind_T, 0)}/${fmt(r.ind_E, 0)}</span>`)({'주도': '#e0343a', '이익 선행': '#c98500', '추세만': '#4f46e5', '소외': '#9aa0aa'}[r.ind_regime]) : '<span class="sub">–</span>'}</td>
     <td style="text-align:left"><span class="st ${ST_CLS(r.stage)}">${r.stage}</span></td>
     <td>${fmtp(r.close, 2)}</td><td class="${sign(r.pct)}">${fmt(r.pct, 2)}%</td>
     <td><b>${fmt(r.rs, 0)}</b></td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td><td title="외국인 수급 위치 P (기관 P${fmt(r.pct_o, 0)}) · 4개월 누적 포지션 ${fmt(r.pos_f, 0)}">${r.pct_f == null ? '–' : `<b style="color:${r.pct_f <= 25 ? '#2f6fe0' : r.pct_f >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.pct_f, 0)}</b>`}</td><td title="${r.etf ? `ETF 보유율 ${fmt(r.etf.etf_own, 2)}% · ${r.etf.n_etf}개 ETF(액티브 ${r.etf.n_active}) · 1개월 순유입 ${fmt(r.etf.f1m, 1)}bp` : 'ETF 미편입'}">${r.etf ? `<b style="color:${r.etf.score >= 75 ? '#e0343a' : r.etf.score <= 25 ? '#2f6fe0' : 'inherit'}">${fmt(r.etf.score, 0)}</b> <span class="sub">${r.etf.n_active ? 'A' + r.etf.n_active : ''}</span>` : '–'}</td>
     <td class="xc">${fmt(r.retrace_pct, 0)}</td><td class="xc">${fmt(r.vol_ratio_5_50, 2)}</td><td class="xc">${fmt(r.rsi, 0)}</td>
     <td class="xc">${r.weinstein}</td><td class="xc">${r.template_score}/8</td><td class="xc">${fmt(r.mktcap_b, 1)}</td><td class="xc">${r.industry || ''}</td></tr>`).join('')
-    || `<tr><td colspan="17" class="empty">조건에 맞는 종목이 없습니다</td></tr>`;
+    || `<tr><td colspan="19" class="empty">조건에 맞는 종목이 없습니다</td></tr>`;
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
@@ -446,6 +448,58 @@ function renderRM() {
   };
 }
 setTimeout(initReports);
+// ── 산업 탑다운: 업종 자체의 추세(T)·이익 모멘텀(E) (research/industry_topdown.py) ──
+let IND = null, indTab = 'top';
+const RG = {'주도': '#e0343a', '이익 선행': '#c98500', '추세만': '#4f46e5', '소외': '#9aa0aa'};
+async function initIndustry() {
+  if (META.market !== 'KR') return;
+  try { IND = await (await fetch(`${META.charts}/industry_topdown.json`)).json(); } catch (e) { return; }
+  $('#indcard').style.display = ''; renderInd();
+}
+function goIndustry(name) {
+  setView('list');
+  const sel = $('#ind'); if (sel && [...sel.options].some(o => o.value === name)) { sel.value = name; sel.dispatchEvent(new Event('change')); }
+  const tb = document.querySelector('.tabs button[data-k="trend"]'); if (tb) tb.click();
+}
+function indScatter(L) {
+  const W = 520, H = 300, P = 34, x = v => P + v / 100 * (W - 2 * P), y = v => H - P - v / 100 * (H - 2 * P);
+  const top = new Set(L.slice().sort((a, b) => (b.T + b.E) - (a.T + a.E)).slice(0, 12).map(d => d.industry));
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:620px;height:auto;display:block">
+    <rect x="${x(60)}" y="${y(100)}" width="${x(100) - x(60)}" height="${y(60) - y(100)}" fill="#e0343a" opacity=".06"/>
+    <line x1="${x(60)}" x2="${x(60)}" y1="${y(0)}" y2="${y(100)}" stroke="var(--line)" stroke-dasharray="3 3"/><line x1="${x(0)}" x2="${x(100)}" y1="${y(60)}" y2="${y(60)}" stroke="var(--line)" stroke-dasharray="3 3"/>
+    <text x="${x(98)}" y="${y(96)}" text-anchor="end" font-size="11" fill="#e0343a" font-weight="700">주도</text><text x="${x(2)}" y="${y(96)}" font-size="11" fill="#c98500" font-weight="700">이익 선행</text>
+    <text x="${x(98)}" y="${y(3)}" text-anchor="end" font-size="11" fill="#4f46e5" font-weight="700">추세만</text><text x="${x(2)}" y="${y(3)}" font-size="11" fill="#9aa0aa" font-weight="700">소외</text>
+    <text x="${W / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">추세 점수 T →</text><text x="10" y="${H / 2}" font-size="11" fill="var(--muted)" transform="rotate(-90 10 ${H / 2})" text-anchor="middle">이익 점수 E →</text>
+    ${L.map(d => `<g style="cursor:pointer" data-ind="${d.industry}"><circle cx="${x(d.T)}" cy="${y(d.E)}" r="${Math.max(3, Math.min(11, Math.sqrt(d.cap_jo) * 1.1))}" fill="${RG[d.regime]}" opacity="${top.has(d.industry) ? .85 : .35}"><title>${d.industry} · T ${d.T} / E ${d.E} · 시총 ${d.cap_jo}조</title></circle>${top.has(d.industry) ? `<text x="${x(d.T) + 7}" y="${y(d.E) + 4}" font-size="10.5" fill="var(--ink)">${d.industry}</text>` : ''}</g>`).join('')}
+  </svg>`;
+}
+function renderInd() {
+  const L = IND.industries, cnt = r => L.filter(d => d.regime === r).length;
+  const list = indTab === 'top' ? L.slice().sort((a, b) => (b.T + b.E) - (a.T + a.E)).slice(0, 20) : L.filter(d => d.regime === indTab).sort((a, b) => (b.T + b.E) - (a.T + a.E));
+  const pc = v => v == null ? '–' : `${v > 0 ? '+' : ''}${Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : fmt(v, 0)}%`;
+  const fc = p => p == null ? 'inherit' : p <= 25 ? '#2f6fe0' : p >= 75 ? '#e0343a' : 'inherit';
+  const tr = d => `<tr data-ind="${d.industry}"><td style="text-align:left"><span class="tg" style="color:${RG[d.regime]};border-color:${RG[d.regime]}">${d.regime}</span> <b>${d.industry}</b>${d.decel ? ' <span class="tg" style="color:#2f6fe0;border-color:#2f6fe0" title="추세는 강한데 다음 분기 이익 증가율이 꺾임">이익 둔화</span>' : ''} <span class="sub">${d.n}종목 · ${d.cap_jo}조</span></td>
+    <td><b>${fmt(d.T, 0)}</b></td><td><b>${fmt(d.E, 0)}</b></td><td>${fmt(d.rs, 0)}</td>
+    <td>${fmt(d.br_stack, 0)}% <span class="sub ${d.br_chg > 0 ? 'up' : d.br_chg < 0 ? 'down' : ''}">${d.br_chg > 0 ? '+' : ''}${fmt(d.br_chg, 0)}p</span></td><td>${d.idx_pos == null ? '–' : fmt(d.idx_pos, 0)}</td>
+    <td>${pc(d.op_yoy)} → ${pc(d.op_yoy_cns)}</td><td>${fmt(d.rep_v_per, 1)} <span class="sub">${d.rep_cov}종목</span></td>
+    <td><b style="color:${fc(d.flow_p)}">${d.flow_p == null ? '–' : 'P' + fmt(d.flow_p, 0)}</b></td><td class="${sign(d.r20)}">${fmt(d.r20, 1)}%</td>
+    <td style="text-align:left;white-space:normal;min-width:180px" class="sub">${(d.stack_names.length ? d.stack_names : d.leaders).slice(0, 4).join(', ')}</td></tr>`;
+  $('#indcard').innerHTML = `<div class="sec-h">산업 탑다운 — 업종 자체의 추세·이익 모멘텀 <span class="sub">${IND.date} · 업종 ${L.length}개 · 주도 ${cnt('주도')} · 이익 선행 ${cnt('이익 선행')} · 추세만 ${cnt('추세만')} · 소외 ${cnt('소외')}</span></div>
+    <div class="sub" style="padding:4px 20px 0;line-height:1.6">백테스트(2024~, 정배열 종목 8,184건): 같은 추세 종목이라도 <b>업종 추세 상위 3분위면 60일 시장대비 +6.0%</b>, 하위면 −0.2% · 업종 내 정배열 비율 60%↑면 +8.2%(승률 53%) → <b>개별 추세는 업종 추세가 받쳐 줄 때 산다</b></div>
+    <div class="rmgrid"><div>${indScatter(L)}</div><div class="sub" style="line-height:1.75;font-size:12.5px">
+      <b style="color:#e0343a">주도</b> 업종 추세·이익 모두 상위 → 이 업종의 추세 종목을 1순위로<br>
+      <b style="color:#c98500">이익 선행</b> 이익은 좋은데 가격 추세가 아직(또는 매크로 매도) → 정배열 폭이 늘기 시작하면 다음 주도 후보<br>
+      <b style="color:#4f46e5">추세만</b> 가격은 강한데 이익 근거가 약함 → 수급·테마 장세, 이익 확인 전엔 비중 축소<br>
+      <b style="color:#9aa0aa">소외</b> 업종 역풍 → 개별 추세 종목도 실패 확률이 높음<br>
+      T = RS 35% + 정배열 종목 비율 35% + 업종지수 정배열 30% · E = 영업이익 YoY 30% + 다음 분기 컨센 YoY 30% + 리포트 검증점수 40% · 점을 누르면 그 업종 종목 목록으로</div></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:0 20px 6px"><b>업종 판정표</b><div class="seg" id="indtab" style="margin-left:auto">${['top', '주도', '이익 선행', '추세만', '소외'].map(k => `<button data-t="${k}" class="${indTab === k ? 'on' : ''}">${k === 'top' ? 'T+E 상위' : k}</button>`).join('')}</div></div>
+    <div style="overflow:auto;padding:0 20px 18px"><table class="rmt"><thead><tr><th style="text-align:left">업종</th><th title="추세 점수">T</th><th title="이익 점수">E</th><th title="업종지수 3·6개월 수익 백분위">RS</th><th title="구성종목 중 정배열 비율 (20일 전 대비)">정배열 폭</th><th title="업종지수 정배열 점수(100 = 완전 정배열)">지수</th><th title="최근 실적 분기 영업이익 합 YoY → 다음 분기 컨센서스 YoY">영업이익 YoY</th><th title="리포트 검증점수(v20) 종목당 평균">리포트</th><th title="업종 외+기 수급 위치">수급</th><th>20일</th><th style="text-align:left">정배열 종목</th></tr></thead><tbody>${list.map(tr).join('')}</tbody></table></div>`;
+  $('#indcard').onclick = e => {
+    const t = e.target.closest('#indtab button'); if (t) { indTab = t.dataset.t; renderInd(); return; }
+    const r = e.target.closest('[data-ind]'); if (r) goIndustry(r.dataset.ind);
+  };
+}
+setTimeout(initIndustry);
 
 // ---- view switching & detail tabs ----
 let VIEW = 'sum';
@@ -720,6 +774,7 @@ async function show(code) {
       ${kv('거래량 5일÷50일', `${fmt(r.vol_ratio_5_50, 2)}${r.vol_dry ? ' ✓ 감소' : ''}`)}
       ${r.pct_f != null ? `<div class="kv" style="cursor:pointer" onclick="openStockFlow('${r.code}')"><span>수급 오실레이터 차트</span><b style="color:var(--acc)">열기 ↗</b></div>` : ''}
       ${r.pct_f != null ? kv('외국인 / 기관 수급 위치 (P, 4개월)', `P${fmt(r.pct_f, 0)} / P${fmt(r.pct_o, 0)}${r.pct_f <= 25 ? ' · 외국인 바텀권' : r.pct_f >= 75 ? ' · 외국인 과열권' : ''}`) : ''}
+      ${r.ind_regime ? kv('업종 탑다운 (업종 자체의 추세·이익)', `<b>${r.ind_regime}</b> · ${r.industry} · 추세 T ${fmt(r.ind_T, 0)} / 이익 E ${fmt(r.ind_E, 0)} · 업종 내 정배열 ${fmt(r.ind_br, 0)}%${r.ind_decel ? ' · ⚠ 이익 증가율 둔화' : ''}${r.ind_regime === '소외' ? ' · 업종 역풍 — 백테스트상 개별 추세 성과 낮음' : r.ind_regime === '주도' ? ' · 업종이 받쳐 주는 추세' : ''}`) : ''}
       ${r.etf ? kv('ETF 수급 (국내 ETF 전체 구성종목)', `<span title="ETF 수혜점수 = 시총 대비 ETF 보유율 백분위 50% + 1개월 ETF 순유입 압력 백분위 50%">수혜점수 ${fmt(r.etf.score, 0)}</span> · 보유율 ${fmt(r.etf.etf_own, 2)}% (${r.etf.n_etf}개 ETF, 액티브 ${r.etf.n_active}개 ${fmt(r.etf.act_own, 2)}%) · 순유입 1주 ${fmt(r.etf.f1w, 1)} / 1개월 ${fmt(r.etf.f1m, 1)} / 3개월 ${fmt(r.etf.f3m, 1)}bp`) : ''}
       ${r.pos_f != null ? kv('외국인 4개월 누적 포지션 (0=가장 비움)', `${fmt(r.pos_f, 0)} · ${r.fpos_state || ''}`) : ''}
       ${r.osc != null ? kv('수급 오실레이터 / 3개월 강도', `${fmt(r.osc, 1)} (${r.osc_state}) / ${fmt(r.str60, 1)}%`) : ''}</div>
