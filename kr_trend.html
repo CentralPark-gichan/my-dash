@@ -484,7 +484,7 @@ function renderInd() {
     <td>${pc(d.op_yoy)} → ${pc(d.op_yoy_cns)}</td><td>${fmt(d.rep_v_per, 1)} <span class="sub">${d.rep_cov}종목</span></td>
     <td><b style="color:${fc(d.flow_p)}">${d.flow_p == null ? '–' : 'P' + fmt(d.flow_p, 0)}</b></td><td class="${sign(d.r20)}">${fmt(d.r20, 1)}%</td>
     <td style="text-align:left;white-space:normal;min-width:180px" class="sub">${(d.stack_names.length ? d.stack_names : d.leaders).slice(0, 4).join(', ')}</td></tr>`;
-  $('#indcard').innerHTML = `<div class="sec-h">산업 탑다운 — 업종 자체의 추세·이익 모멘텀 <span class="sub">${IND.date} · 업종 ${L.length}개 · 주도 ${cnt('주도')} · 이익 선행 ${cnt('이익 선행')} · 추세만 ${cnt('추세만')} · 소외 ${cnt('소외')}</span></div>
+  $('#indcard').innerHTML = `<div class="sec-h">산업 탑다운 — 업종 자체의 추세·이익 모멘텀 <span class="sub">${IND.date} · 업종 ${L.length}개 · 주도 ${cnt('주도')} · 이익 선행 ${cnt('이익 선행')} · 추세만 ${cnt('추세만')} · 소외 ${cnt('소외')} · <b title="업종지수 자체가 완전 정배열(종가>50>150>200, 200일선 상승)인 업종 수 — T는 업종 간 상대 순위라 시장 전체가 약할 땐 이 숫자로 절대 수준을 확인">업종지수 정배열 ${L.filter(d => d.idx_pos === 100).length}/${L.length}</b></span></div>
     <div class="sub" style="padding:4px 20px 0;line-height:1.6">백테스트(2024~, 정배열 종목 8,184건): 같은 추세 종목이라도 <b>업종 추세 상위 3분위면 60일 시장대비 +6.0%</b>, 하위면 −0.2% · 업종 내 정배열 비율 60%↑면 +8.2%(승률 53%) → <b>개별 추세는 업종 추세가 받쳐 줄 때 산다</b></div>
     <div class="rmgrid"><div>${indScatter(L)}</div><div class="sub" style="line-height:1.75;font-size:12.5px">
       <b style="color:#e0343a">주도</b> 업종 추세·이익 모두 상위 → 이 업종의 추세 종목을 1순위로<br>
