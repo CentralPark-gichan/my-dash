@@ -470,7 +470,7 @@ function goIndustry(name) {  // 업종 클릭 → '수급' 화면으로 이동: 
   if (SF && SF[key]) { sfSel = key; renderSF(); drawSF(); const s = $('#sflist .row.sel'); if (s) s.scrollIntoView({block: 'nearest'}); }
   else { renderSF(); drawIndIdx(name); }
   fillInd(name);
-  $('#sfcard').scrollIntoView({behavior: 'smooth', block: 'start'});
+  setTimeout(() => { const t = $('#sftitle'), y = t.getBoundingClientRect().top + scrollY - 70; scrollTo({top: y, behavior: 'smooth'}); }, 50);  // 차트 제목으로 바로 이동
 }
 function fillInd(name) {
   const d = IND && IND.industries.find(x => x.industry === name);
