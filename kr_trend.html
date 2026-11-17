@@ -948,14 +948,6 @@ function drawLines(chart, cs, L) {
   if (H && SHOW_HIST) {
     (H.channels || []).forEach(c => { seg(c.t0, c.upper[0], c.t1, c.upper[1], 'rgba(154,143,128,.45)', 2, 1, ''); seg(c.t0, c.lower[0], c.t1, c.lower[1], 'rgba(154,143,128,.45)', 2, 1, ''); });
     (H.trendlines || []).forEach(t => seg(t.t0, t.p0, t.t1, t.p1, t.kind.startsWith('상승') ? 'rgba(27,158,108,.55)' : 'rgba(210,63,49,.55)', 0, 1, ''));
-    const bear = n => /탑|헤드앤숄더$|^헤드앤숄더|라이징|하락 삼각/.test(n) && !/역헤드/.test(n);
-    const short = n => n.replace('더블 탑(쌍봉)', '쌍봉').replace('더블 바텀(쌍바닥)', '쌍바닥').replace('역헤드앤숄더', '역H&S').replace('헤드앤숄더', 'H&S').replace(/\(.*?\)/g, '').replace('삼각수렴', '삼각').trim();
-    const mk = [];
-    (H.patterns || []).forEach(pt => { pt.lines.forEach(g => seg(g.t0, g.p0, g.t1, g.p1, 'rgba(237,161,0,.5)', 0, 1, ''));
-      const t1 = pt.lines.reduce((m, g) => g.t1 > m ? g.t1 : m, pt.lines[0].t1);
-      mk.push({time: t1, position: bear(pt.name) ? 'aboveBar' : 'belowBar', color: bear(pt.name) ? '#d23f31' : '#1b9e6c', shape: bear(pt.name) ? 'arrowDown' : 'arrowUp', text: short(pt.name)}); });
-    mk.sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
-    try { cs.setMarkers(mk); } catch (e) {}
   }
 }
 const patternTxt = s => (s.lines?.patterns || []).map(p => `<span class="badge ${/확정|상단 돌파/.test(p.status) ? 'ok' : ''}">${p.name} · ${p.status}</span> <span class="sub">${p.bias}${p.vol_contracting ? ' · 수렴 중 거래량 감소 ✓' : ''}</span>`).join('<br>') || '감지된 패턴 없음';
@@ -987,7 +979,7 @@ function drawChart() {
   const up = css('--up'), dn = css('--down');
   document.querySelectorAll(`#${CH}tf button`).forEach(b => b.classList.toggle('on', b.dataset.tf === TF));
   if (s0.lines && s0.lines.hist && Q('tf') && !Q('histtg')) {
-    Q('tf').insertAdjacentHTML('afterend', `<label class="sub" style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="${CH}histtg" ${SHOW_HIST ? 'checked' : ''}> 과거 선·패턴(2010~)</label>`);
+    Q('tf').insertAdjacentHTML('afterend', `<label class="sub" style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="${CH}histtg" ${SHOW_HIST ? 'checked' : ''}> 과거 추세선·채널(2010~)</label>`);
     Q('histtg').onchange = e => { SHOW_HIST = e.target.checked; try { localStorage.setItem('showHist', SHOW_HIST ? '1' : '0'); } catch (er) {} drawChart(); };
   }
   Q('tfnote').textContent = W ? '주봉 · 10주(≈50일)·30주(와인스타인 기준선)·40주(≈200일) 이평 · 수평 지지/저항만 표시' : '일봉 · EMA21·50·150·200일선 · 채널·추세선·패턴 표시';
@@ -1009,6 +1001,17 @@ function drawChart() {
   if (r.trail) cs.createPriceLine({price: r.trail, color: '#f08c00', lineStyle: 1, lineWidth: 2, axisLabelVisible: true, title: '트레일링'});
   if (W) (s0.lines?.levels || []).forEach(l => cs.createPriceLine({price: l.price, color: l.role === '저항' ? '#ff3b3b' : '#3d8bff', lineStyle: 2, lineWidth: 2, axisLabelVisible: true, title: l.role}));
   else drawLines(pc, cs, s0.lines);
+  if (s0.trend_events && s0.trend_events.length) {  // research/backtest_pullback_portfolio.py → data/derived/trend_events.json
+    const ymd = d => d.length === 8 ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : d;
+    const snap = d => { if (!W) return d; let k = t[0]; for (const x of t) { if (x <= d) k = x; else break; } return k; };  // 주봉이면 해당 주 첫 봉에
+    const mk = [];
+    s0.trend_events.forEach(([a, b]) => {
+      const ta = ymd(a); if (ta >= t[0]) mk.push({time: snap(ta), position: 'belowBar', color: '#1b9e6c', shape: 'arrowUp', text: '추세 진입'});
+      if (b) { const tb = ymd(b); if (tb >= t[0]) mk.push({time: snap(tb), position: 'aboveBar', color: '#d23f31', shape: 'arrowDown', text: '추세 이탈'}); }
+    });
+    mk.sort((x, y) => x.time < y.time ? -1 : x.time > y.time ? 1 : 0);
+    try { cs.setMarkers(mk); } catch (e) {}
+  }
   const rs = rc.addLineSeries({color: css('--acc'), lineWidth: 1.5, priceLineVisible: false});
   rs.setData(t.map((d, i) => s.r[i] == null ? null : {time: d, value: s.r[i]}).filter(Boolean));
   [[70, css('--muted')], [40, '#1b9e6c']].forEach(([v, col]) => rs.createPriceLine({price: v, color: col, lineStyle: 2, lineWidth: 1, axisLabelVisible: true}));
