@@ -289,7 +289,7 @@ document.title = META.title;
   $('#market').innerHTML = `<div class="kpis">${k('200일선 위 종목', m.above200 + '%', m.above200)}${k('50일선 위 종목', m.above50 + '%', m.above50)}${k('트렌드 템플릿 통과', m.template_pct + '%', m.template_pct * 5)}${k('동일가중 지수 (와인스타인)', m.ew_stage + '단계 <span class="sub">고점 대비 ' + m.ew_from_high + '%</span>')}</div>
     <div class="regime ${weak ? 'warn' : 'ok'}">${weak ? '약세 국면 — 시장이 약하면 주도주도 함께 하락. 비중 축소·신규 진입 신중 (백테스트: 약세장 눌림 매수 20일 -0.7%)' : '우호적 국면 — 눌림목 매수 유효'}</div>`; }
 let tab = 'pull', sortKey = 'pull_score', sortDir = -1, selected = null;
-const COLS = [['symbol','종목'],['why_rank','상승 이유'],['ind_T','업종 판정'],['stage','단계'],['close','종가'],['pct','등락'],['rs','RS'],['pull_score','눌림점수'],['depth_pct','고점대비%'],['support','지지선'],['pct_f','외인 수급 P'],['etf_score','ETF 수급'],
+const COLS = [['symbol','종목'],['why_rank','상승 이유'],['ind_T','업종 판정'],['stage','단계'],['close','종가'],['pct','등락'],['rs','RS'],['mrs','지수대비'],['pull_score','눌림점수'],['depth_pct','고점대비%'],['support','지지선'],['pct_f','외인 수급 P'],['etf_score','ETF 수급'],
   ['retrace_pct','되돌림%',1],['vol_ratio_5_50','거래량비',1],['rsi','RSI',1],['weinstein','W단계',1],['template_score','템플릿',1],['mktcap_b','시총',1],['industry','업종',1]];
 const EXCOLS = [['symbol','종목'],['exit_severity','이탈 강도'],['exit_days','이탈일'],['since_exit_pct','이탈 후'],['exit_heavy','대량거래'],['exit_lost','이탈 계기'],
   ['template_score','템플릿'],['exit_vs50','50일선 대비'],['exit_vs200','200일선 대비'],['rs','RS'],['why_rank','이전 상승 이유'],['industry','업종']];
@@ -364,10 +364,10 @@ function render() {
     <td style="text-align:left">${r.ind_regime ? (c => `<span class="tg" style="color:${c};border-color:${c}" title="${r.industry} 업종 — 추세 T ${fmt(r.ind_T, 0)} / 이익 E ${fmt(r.ind_E, 0)} / 정배열 폭 ${fmt(r.ind_br, 0)}%${r.ind_decel ? ' · 이익 증가율 둔화' : ''}">${r.ind_regime}</span> <span class="sub">${fmt(r.ind_T, 0)}/${fmt(r.ind_E, 0)}</span>`)({'주도': '#e0343a', '이익 선행': '#c98500', '추세만': '#4f46e5', '소외': '#9aa0aa'}[r.ind_regime]) : '<span class="sub">–</span>'}</td>
     <td style="text-align:left"><span class="st ${ST_CLS(r.stage)}">${r.stage}</span></td>
     <td>${fmtp(r.close, 2)}</td><td class="${sign(r.pct)}">${fmt(r.pct, 2)}%</td>
-    <td><b>${fmt(r.rs, 0)}</b></td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td><td title="외국인 수급 위치 P (기관 P${fmt(r.pct_o, 0)}) · 4개월 누적 포지션 ${fmt(r.pos_f, 0)}">${r.pct_f == null ? '–' : `<b style="color:${r.pct_f <= 25 ? '#2f6fe0' : r.pct_f >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.pct_f, 0)}</b>`}</td><td title="${r.etf ? `ETF 보유율 ${fmt(r.etf.etf_own, 2)}% · ${r.etf.n_etf}개 ETF(액티브 ${r.etf.n_active}) · 1개월 순유입 ${fmt(r.etf.f1m, 1)}bp` : 'ETF 미편입'}">${r.etf ? `<b style="color:${r.etf.score >= 75 ? '#e0343a' : r.etf.score <= 25 ? '#2f6fe0' : 'inherit'}">${fmt(r.etf.score, 0)}</b> <span class="sub">${r.etf.n_active ? 'A' + r.etf.n_active : ''}</span>` : '–'}</td>
+    <td><b>${fmt(r.rs, 0)}</b></td><td title="${r.rsx ? `Mansfield RS ${fmt(r.rsx.mrs, 1)} (0 위 = ${r.rsx.bm}보다 강함) · RS 등급(12-1) ${r.rsx.rating ?? '–'} · 지수대비 1개월 ${fmt(r.rsx.x21, 1)}% / 3개월 ${fmt(r.rsx.x63, 1)}% / 12개월 ${fmt(r.rsx.x252, 1)}%${r.rsx.rs_hi ? ' · RS 라인 52주 신고가' : ''}` : ''}">${r.rsx ? `<b style="color:${r.rsx.mrs > 0 ? 'var(--up)' : 'var(--down)'}">${r.rsx.mrs > 0 ? '+' : ''}${fmt(r.rsx.mrs, 0)}</b>${r.rsx.rs_hi ? ' <span class="tg py" title="RS 라인 52주 신고가">RS高</span>' : ''}` : '–'}</td><td>${fmt(r.pull_score, 0)}</td><td>${fmt(-r.depth_pct, 1)}</td><td>${r.support || '–'}</td><td title="외국인 수급 위치 P (기관 P${fmt(r.pct_o, 0)}) · 4개월 누적 포지션 ${fmt(r.pos_f, 0)}">${r.pct_f == null ? '–' : `<b style="color:${r.pct_f <= 25 ? '#2f6fe0' : r.pct_f >= 75 ? '#e0343a' : 'inherit'}">P${fmt(r.pct_f, 0)}</b>`}</td><td title="${r.etf ? `ETF 보유율 ${fmt(r.etf.etf_own, 2)}% · ${r.etf.n_etf}개 ETF(액티브 ${r.etf.n_active}) · 1개월 순유입 ${fmt(r.etf.f1m, 1)}bp` : 'ETF 미편입'}">${r.etf ? `<b style="color:${r.etf.score >= 75 ? '#e0343a' : r.etf.score <= 25 ? '#2f6fe0' : 'inherit'}">${fmt(r.etf.score, 0)}</b> <span class="sub">${r.etf.n_active ? 'A' + r.etf.n_active : ''}</span>` : '–'}</td>
     <td class="xc">${fmt(r.retrace_pct, 0)}</td><td class="xc">${fmt(r.vol_ratio_5_50, 2)}</td><td class="xc">${fmt(r.rsi, 0)}</td>
     <td class="xc">${r.weinstein}</td><td class="xc">${r.template_score}/8</td><td class="xc">${fmt(r.mktcap_b, 1)}</td><td class="xc">${r.industry || ''}</td></tr>`).join('')
-    || `<tr><td colspan="19" class="empty">조건에 맞는 종목이 없습니다</td></tr>`;
+    || `<tr><td colspan="20" class="empty">조건에 맞는 종목이 없습니다</td></tr>`;
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
@@ -451,11 +451,12 @@ function renderRM() {
 }
 setTimeout(initReports);
 // ── 산업 탑다운: 업종 자체의 추세(T)·이익 모멘텀(E) (research/industry_topdown.py) ──
-let IND = null, indTab = 'top';
+let IND = null, indTab = 'top', RSI = null;
 const RG = {'주도': '#e0343a', '이익 선행': '#c98500', '추세만': '#4f46e5', '소외': '#9aa0aa'};
 async function initIndustry() {
   if (META.market !== 'KR') return;
   try { IND = await (await fetch(`${META.charts}/industry_topdown.json`)).json(); } catch (e) { return; }
+  try { RSI = await (await fetch(`${META.charts}/rs_index.json`)).json(); } catch (e) { RSI = null; }
   $('#indcard').style.display = ''; renderInd();
 }
 let indSel = null;
@@ -505,12 +506,12 @@ function indPanel(d) {
   const GC = {A: '#e0343a', B: '#4f46e5', '경고': '#2f6fe0', C: '#9aa0aa'};
   return `<div id="indpanel" style="margin:4px 18px 16px;border:1px solid ${RG[d.regime]};border-radius:14px;padding:12px 14px">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tg" style="color:${RG[d.regime]};border-color:${RG[d.regime]}">${d.regime}</span><b style="font-size:15px">${d.industry}</b>
-      <span class="sub">T ${fmt(d.T, 0)} / E ${fmt(d.E, 0)} · 정배열 ${fmt(d.br_stack, 0)}% · 영업이익 YoY ${d.op_yoy == null ? '–' : fmt(d.op_yoy, 0) + '%'} → 컨센 ${d.op_yoy_cns == null ? '–' : fmt(d.op_yoy_cns, 0) + '%'} · 시총 상위 ${d.members.length}종목</span>
+      <span class="sub">T ${fmt(d.T, 0)} / E ${fmt(d.E, 0)}${(q => q ? ` · 코스피대비 1M ${fmt(q.x21, 1)}% / 3M ${fmt(q.x63, 1)}% / 6M ${fmt(q.x126, 1)}% · Mansfield ${fmt(q.mrs, 0)}` : '')(RSI && RSI.industries[d.industry])} · 정배열 ${fmt(d.br_stack, 0)}% · 영업이익 YoY ${d.op_yoy == null ? '–' : fmt(d.op_yoy, 0) + '%'} → 컨센 ${d.op_yoy_cns == null ? '–' : fmt(d.op_yoy_cns, 0) + '%'} · 시총 상위 ${d.members.length}종목</span>
       <span style="margin-left:auto;display:flex;gap:6px">${hasOpt ? `<button class="btn" onclick="indListFilter('${d.industry}')">추세 목록에서 보기</button>` : '<span class="sub">추세 목록에 이 업종 종목 없음</span>'}<button class="btn" onclick="setView('sum');$('#indcard').scrollIntoView({block:'start'})">← 업종 판정표</button></span></div>
-    <div style="overflow:auto;margin-top:8px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>시총</th><th title="정배열 / 템플릿 8/8">추세</th><th>20일</th><th>60일</th><th title="최근 분기 영업이익 YoY">영업이익</th><th title="리포트 검증점수 등급 (v20)">리포트</th><th></th></tr></thead><tbody>
+    <div style="overflow:auto;margin-top:8px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>시총</th><th title="정배열 / 템플릿 8/8">추세</th><th>20일</th><th>60일</th><th title="최근 분기 영업이익 YoY">영업이익</th><th title="리포트 검증점수 등급 (v20)">리포트</th><th title="Mansfield RS (지수 대비, 0 위 = 강함) · RS 등급(12-1)">지수대비</th><th></th></tr></thead><tbody>
     ${d.members.map(m => `<tr data-mc="${m.code}"><td style="text-align:left"><b>${m.name}</b> <span class="sub">${m.code}</span></td><td>${fmt(m.cap_jo, 1)}조</td>
       <td>${m.tmpl ? '<span class="tg py">8/8</span>' : m.stack ? '<span class="tg">정배열</span>' : '<span class="sub">–</span>'}</td><td>${pc(m.r20)}</td><td>${pc(m.r60)}</td><td>${pc(m.op_yoy)}</td>
-      <td>${m.grade ? `<b style="color:${GC[m.grade]}">${m.grade}</b> <span class="sub">${m.v20 > 0 ? '+' : ''}${m.v20}</span>` : '<span class="sub">–</span>'}</td>
+      <td>${m.grade ? `<b style="color:${GC[m.grade]}">${m.grade}</b> <span class="sub">${m.v20 > 0 ? '+' : ''}${m.v20}</span>` : '<span class="sub">–</span>'}</td><td>${(q => q ? `<b class="${q.mrs > 0 ? 'up' : 'down'}">${q.mrs > 0 ? '+' : ''}${fmt(q.mrs, 0)}</b> <span class="sub">${q.rating ?? ''}</span>${q.rs_hi ? ' <span class="tg py">RS高</span>' : ''}` : '–')(RSI && RSI.stocks[m.code])}</td>
       <td class="sub">${inList.has(m.code) ? '차트·분석 ↗' : '차트(수급) ↗'}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 function indScatter(L) {
@@ -531,7 +532,7 @@ function renderInd() {
   const pc = v => v == null ? '–' : `${v > 0 ? '+' : ''}${Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : fmt(v, 0)}%`;
   const fc = p => p == null ? 'inherit' : p <= 25 ? '#2f6fe0' : p >= 75 ? '#e0343a' : 'inherit';
   const tr = d => `<tr data-ind="${d.industry}"><td style="text-align:left"><span class="tg" style="color:${RG[d.regime]};border-color:${RG[d.regime]}">${d.regime}</span> <b>${d.industry}</b>${d.decel ? ' <span class="tg" style="color:#2f6fe0;border-color:#2f6fe0" title="추세는 강한데 다음 분기 이익 증가율이 꺾임">이익 둔화</span>' : ''} <span class="sub">${d.n}종목 · ${d.cap_jo}조</span></td>
-    <td><b>${fmt(d.T, 0)}</b></td><td><b>${fmt(d.E, 0)}</b></td><td>${fmt(d.rs, 0)}</td>
+    <td><b>${fmt(d.T, 0)}</b></td><td><b>${fmt(d.E, 0)}</b></td><td>${fmt(d.rs, 0)}</td><td>${(q => q ? `<b class="${q.x63 > 0 ? 'up' : 'down'}">${q.x63 > 0 ? '+' : ''}${fmt(q.x63, 1)}%</b> <span class="sub" title="Mansfield RS">M${q.mrs > 0 ? '+' : ''}${fmt(q.mrs, 0)}</span>${q.rs_hi ? ' <span class="tg py" title="RS 라인 52주 신고가">RS高</span>' : ''}` : '–')(RSI && RSI.industries[d.industry])}</td>
     <td>${fmt(d.br_stack, 0)}% <span class="sub ${d.br_chg > 0 ? 'up' : d.br_chg < 0 ? 'down' : ''}">${d.br_chg > 0 ? '+' : ''}${fmt(d.br_chg, 0)}p</span></td><td>${d.idx_pos == null ? '–' : fmt(d.idx_pos, 0)}</td>
     <td>${pc(d.op_yoy)} → ${pc(d.op_yoy_cns)}</td><td>${fmt(d.rep_v_per, 1)} <span class="sub">${d.rep_cov}종목</span></td>
     <td><b style="color:${fc(d.flow_p)}">${d.flow_p == null ? '–' : 'P' + fmt(d.flow_p, 0)}</b></td><td class="${sign(d.r20)}">${fmt(d.r20, 1)}%</td>
@@ -545,7 +546,7 @@ function renderInd() {
       <b style="color:#9aa0aa">소외</b> 업종 역풍 → 개별 추세 종목도 실패 확률이 높음<br>
       T = RS 35% + 정배열 종목 비율 35% + 업종지수 정배열 30% · E = 영업이익 YoY 30% + 다음 분기 컨센 YoY 30% + 리포트 검증점수 40% · 점을 누르면 그 업종 종목 목록으로</div></div>
     <div style="display:flex;align-items:center;gap:10px;padding:0 20px 6px"><b>업종 판정표</b><div class="seg" id="indtab" style="margin-left:auto">${['top', '주도', '이익 선행', '추세만', '소외'].map(k => `<button data-t="${k}" class="${indTab === k ? 'on' : ''}">${k === 'top' ? 'T+E 상위' : k}</button>`).join('')}</div></div>
-    <div style="overflow:auto;padding:0 20px 18px"><table class="rmt"><thead><tr><th style="text-align:left">업종</th><th title="추세 점수">T</th><th title="이익 점수">E</th><th title="업종지수 3·6개월 수익 백분위">RS</th><th title="구성종목 중 정배열 비율 (20일 전 대비)">정배열 폭</th><th title="업종지수 정배열 점수(100 = 완전 정배열)">지수</th><th title="최근 실적 분기 영업이익 합 YoY → 다음 분기 컨센서스 YoY">영업이익 YoY</th><th title="리포트 검증점수(v20) 종목당 평균">리포트</th><th title="업종 외+기 수급 위치">수급</th><th>20일</th><th style="text-align:left">정배열 종목</th></tr></thead><tbody>${list.map(tr).join('')}</tbody></table></div>`;
+    <div style="overflow:auto;padding:0 20px 18px"><table class="rmt"><thead><tr><th style="text-align:left">업종</th><th title="추세 점수">T</th><th title="이익 점수">E</th><th title="업종지수 3·6개월 수익 백분위">RS</th><th title="코스피 대비 3개월 초과수익 (업종 RS는 3개월이 최선 — 백테스트 IC t 3.2) · Mansfield RS">코스피대비 3M</th><th title="구성종목 중 정배열 비율 (20일 전 대비)">정배열 폭</th><th title="업종지수 정배열 점수(100 = 완전 정배열)">지수</th><th title="최근 실적 분기 영업이익 합 YoY → 다음 분기 컨센서스 YoY">영업이익 YoY</th><th title="리포트 검증점수(v20) 종목당 평균">리포트</th><th title="업종 외+기 수급 위치">수급</th><th>20일</th><th style="text-align:left">정배열 종목</th></tr></thead><tbody>${list.map(tr).join('')}</tbody></table></div>`;
   $('#indcard').onclick = e => {
     const t = e.target.closest('#indtab button'); if (t) { indTab = t.dataset.t; renderInd(); return; }
     if (e.target.closest('button')) return;
@@ -648,6 +649,12 @@ function drawSF() {
   cap.setData(v.t.map((d, i) => ({time: d, value: v.cap[i]})));
   const os = sfc.addLineSeries({color: '#e0343a', lineWidth: 2, priceScaleId: 'right', priceLineVisible: false, title: '수급오실레이터(%)'});
   os.setData(v.t.map((d, i) => ({time: d, value: v.osc[i]})));
+  const ri = RSI && RSI.industries[sfSel.replace(/^\[.*?\] /, '')];
+  if (ri && ri.line) {  // 코스피 대비 RS 라인 (1년 전 = 100)
+    const t0 = v.t[0], rl = sfc.addLineSeries({color: '#4f46e5', lineWidth: 1.5, lineStyle: 0, priceScaleId: 'rs', priceLineVisible: false, title: 'RS(코스피 대비)'});
+    sfc.priceScale('rs').applyOptions({visible: false, scaleMargins: {top: 0.1, bottom: 0.1}});
+    rl.setData(RSI.t.map((x, i) => ({time: `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6, 8)}`, value: ri.line[i]})).filter(o => o.value != null && o.time >= t0));
+  }
   os.createPriceLine({price: 0, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: false});
   sfc.timeScale().fitContent();
 }
@@ -829,6 +836,7 @@ async function show(code) {
       ${kv('거래량 5일÷50일', `${fmt(r.vol_ratio_5_50, 2)}${r.vol_dry ? ' ✓ 감소' : ''}`)}
       ${r.pct_f != null ? `<div class="kv" style="cursor:pointer" onclick="openStockFlow('${r.code}')"><span>수급 오실레이터 차트</span><b style="color:var(--acc)">열기 ↗</b></div>` : ''}
       ${r.pct_f != null ? kv('외국인 / 기관 수급 위치 (P, 4개월)', `P${fmt(r.pct_f, 0)} / P${fmt(r.pct_o, 0)}${r.pct_f <= 25 ? ' · 외국인 바텀권' : r.pct_f >= 75 ? ' · 외국인 과열권' : ''}`) : ''}
+      ${r.rsx ? kv(`지수 대비 상대강도 (vs ${r.rsx.bm})`, `Mansfield <b style="color:${r.rsx.mrs > 0 ? 'var(--up)' : 'var(--down)'}">${r.rsx.mrs > 0 ? '+' : ''}${fmt(r.rsx.mrs, 1)}</b>${r.rsx.mrs_up ? '↑' : '↓'} · RS 등급(12-1) <b>${r.rsx.rating ?? '–'}</b>${r.rsx.rs_hi ? ' · <b>RS 라인 52주 신고가</b>' : ''} · 초과수익 1개월 ${fmt(r.rsx.x21, 1)}% / 3개월 ${fmt(r.rsx.x63, 1)}% / 6개월 ${fmt(r.rsx.x126, 1)}% / 12개월 ${fmt(r.rsx.x252, 1)}%${r.rsx.mrs <= 0 ? ' · ⚠ 지수보다 약함 — 백테스트상 추세 종목 중 최악(60일 −15.8%)' : ''}`) : ''}
       ${r.ind_regime ? kv('업종 탑다운 (업종 자체의 추세·이익)', `<b>${r.ind_regime}</b> · ${r.industry} · 추세 T ${fmt(r.ind_T, 0)} / 이익 E ${fmt(r.ind_E, 0)} · 업종 내 정배열 ${fmt(r.ind_br, 0)}%${r.ind_decel ? ' · ⚠ 이익 증가율 둔화' : ''}${r.ind_regime === '소외' ? ' · 업종 역풍 — 백테스트상 개별 추세 성과 낮음' : r.ind_regime === '주도' ? ' · 업종이 받쳐 주는 추세' : ''}`) : ''}
       ${r.etf ? kv('ETF 수급 (국내 ETF 전체 구성종목)', `<span title="ETF 수혜점수 = 시총 대비 ETF 보유율 백분위 50% + 1개월 ETF 순유입 압력 백분위 50%">수혜점수 ${fmt(r.etf.score, 0)}</span> · 보유율 ${fmt(r.etf.etf_own, 2)}% (${r.etf.n_etf}개 ETF, 액티브 ${r.etf.n_active}개 ${fmt(r.etf.act_own, 2)}%) · 순유입 1주 ${fmt(r.etf.f1w, 1)} / 1개월 ${fmt(r.etf.f1m, 1)} / 3개월 ${fmt(r.etf.f3m, 1)}bp`) : ''}
       ${r.pos_f != null ? kv('외국인 4개월 누적 포지션 (0=가장 비움)', `${fmt(r.pos_f, 0)} · ${r.fpos_state || ''}`) : ''}
