@@ -226,7 +226,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <div id="overview" style="display:contents"></div>
   </div>
   <div class="view" id="v-flow">
-  <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종·종목 수급 오실레이터 <span class="sub">외국인+기관 20일 순매수 ÷ 업종 시총 · 현재 위치 = 최근 80개(≈4개월) 중 백분위 · P≤25 바텀권(수급 비움) / P≥75 과열권</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button><button data-k="종목">종목</button></div><div class="seg" id="sfbase" style="display:none"><button data-b="1" class="on">외+기 기준</button><button data-b="2">외국인</button><button data-b="3">기관</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div><div id="sfind"></div></section>
+  <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종·종목 수급 오실레이터 <span class="sub">외국인+기관 누적 순매수 금액을 최근 4개월(80거래일) 최저~최고로 min-max 스케일링한 0~100 · 25 이하 바텀권(수급 비움) / 75 이상 과열권</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button><button data-k="종목">종목</button></div><div class="seg" id="sfbase" style="display:none"><button data-b="1" class="on">외+기 기준</button><button data-b="2">외국인</button><button data-b="3">기관</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div><div id="sfind"></div></section>
   </div>
   <div class="view" id="v-list">
   <main>
@@ -613,21 +613,25 @@ async function drawStockFlow(code) {
   const v = FI[code]; if (!v) return;
   if (!FCACHE[code]) { try { FCACHE[code] = await (await fetch(`${META.charts}/flow/${code}.json`)).json(); } catch (e) { return; } }
   if (sfSel !== code) return;
-  const d = FCACHE[code], n = d.t.length - 1, cur = {1: d.ps[n], 2: d.pf[n], 3: d.po[n]}[sfBase];
-  $('#sftitle').innerHTML = `${v[0]} <span class="sub">${code} · ${BASE_NM[sfBase]} 수급 위치 P${fmt(cur, 1)} (최근 80개 관측치) · 외국인 P${fmt(d.pf[n], 0)} / 기관 P${fmt(d.po[n], 0)} / 외+기 P${fmt(d.ps[n], 0)}</span>`;
+  const d = FCACHE[code], n = d.t.length - 1, M = d.ms ? {1: d.ms, 2: d.mf, 3: d.mo} : {1: d.ps, 2: d.pf, 3: d.po}, cur = M[sfBase][n];
+  $('#sftitle').innerHTML = `${v[0]} <span class="sub">${code} · ${BASE_NM[sfBase]} 수급 오실레이터 ${fmt(cur, 1)} (누적 순매수 4개월 min-max 0~100) · 외국인 ${fmt(M[2][n], 0)} / 기관 ${fmt(M[3][n], 0)} / 외+기 ${fmt(M[1][n], 0)}</span>`;
   $('#sfzbar').innerHTML = zbar(cur) + '<div class="sub" style="display:flex;justify-content:space-between"><span>P0 바텀권</span><span>P25</span><span>P50</span><span>P75</span><span>과열권 P100</span></div>';
-  const tip = cur == null ? '' : cur <= 25 ? (sfBase === 3 ? '기관 바텀권 — 백테스트상 열위(기관 비움은 경고)' : sfBase === 1 ? '외+기 바텀권 — 최근 수급이 비워진 구간. 추세가 살아 있으면 재매수 기대(외국인 P도 같이 확인)' : '외국인 바텀권 — 추세가 살아 있다면 재매수 기대 구간(백테스트 +4.8% vs 전체 +3.9%)') : cur >= 75 ? '과열권 — 수급이 이미 많이 들어온 구간' : '';
-  $('#sfmem').innerHTML = `${tip ? '<b>' + tip + '</b> · ' : ''}<b style="color:var(--ink)">━ 주가</b> · <span style="color:#e0343a">━ 수급오실레이터</span> (외국인+기관 20일 순매수 ÷ 시총, %) · <a href="#" onclick="setView('list');show('${code}');return false">${DATA.rows.find(r => r.code === code) ? '종목 상세 보기' : ''}</a>`;
+  const tip = cur == null ? '' : cur <= 25 ? `${BASE_NM[sfBase]} 바텀권 — 4개월 중 가장 많이 비워진 상태. 추세가 살아 있을 때만 재매수 후보(추세·업종·이익 같이 확인)` : cur >= 75 ? '과열권 — 4개월 중 가장 많이 채운 상태' : '';
+  $('#sfmem').innerHTML = `${tip ? '<b>' + tip + '</b> · ' : ''}<b style="color:var(--ink)">━ 주가</b> · <span style="color:#e0343a">━ 수급 오실레이터</span> (${BASE_NM[sfBase]} 누적 순매수 금액, 최근 4개월 min-max 0~100) · <a href="#" onclick="setView('list');show('${code}');return false">${DATA.rows.find(r => r.code === code) ? '종목 상세 보기' : ''}</a>`;
   $('#sfchart').innerHTML = '';
   sfc = LightweightCharts.createChart($('#sfchart'), {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
     grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, autoSize: true, crosshair: {mode: 0},
     leftPriceScale: {visible: true, borderVisible: false}, rightPriceScale: {borderVisible: false}});
   const px = sfc.addLineSeries({color: css('--ink'), lineWidth: 2, priceScaleId: 'left', priceLineVisible: false, title: '주가'});
   px.setData(d.t.map((t, i) => d.c[i] == null ? null : {time: t, value: d.c[i]}).filter(Boolean));
-  const os = sfc.addLineSeries({color: '#e0343a', lineWidth: 2.5, priceScaleId: 'right', priceLineVisible: false, title: '수급오실레이터(외+기, %)'});
-  os.setData(d.t.map((t, i) => d.s[i] == null ? null : {time: t, value: d.s[i]}).filter(Boolean));
-  os.createPriceLine({price: 0, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: false});
+  const os = sfc.addLineSeries({color: '#e0343a', lineWidth: 2.5, priceScaleId: 'right', priceLineVisible: false, title: `수급 오실레이터(${BASE_NM[sfBase]})`});
+  os.setData(d.t.map((t, i) => M[sfBase][i] == null ? null : {time: t, value: M[sfBase][i]}).filter(Boolean));
+  oscBands(os);
   sfc.timeScale().fitContent();
+}
+function oscBands(s) {  // 0~100 고정 + 25 바텀권 / 75 과열권 기준선
+  s.applyOptions({autoscaleInfoProvider: () => ({priceRange: {minValue: 0, maxValue: 100}})});
+  [[75, '과열권'], [25, '바텀권']].forEach(([v, t]) => s.createPriceLine({price: v, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: t}));
 }
 function openStockFlow(code) {
   if (!FI || !FI[code]) return;
@@ -638,7 +642,7 @@ function openStockFlow(code) {
 function drawSF() {
   if (sfKind === '종목') return drawStockFlow(sfSel);
   const v = SF && SF[sfSel]; if (!v) return;
-  $('#sftitle').innerHTML = `${sfSel} <span class="sub">현재 수급 위치 P${fmt(v.pct, 1)} (최근 80개 관측치) · 5일 전 P${fmt(v.pct_5, 0)}</span>`;
+  $('#sftitle').innerHTML = `${sfSel} <span class="sub">수급 오실레이터 ${fmt(v.pct, 1)} (외+기 누적 순매수 4개월 min-max 0~100) · 5일 전 ${fmt(v.pct_5, 0)}</span>`;
   $('#sfzbar').innerHTML = zbar(v.pct) + '<div class="sub" style="display:flex;justify-content:space-between"><span>P0 바텀권</span><span>P25</span><span>P50</span><span>P75</span><span>과열권 P100</span></div>';
   $('#sfmem').textContent = '시총 상위: ' + v.members.join(', ');
   $('#sfchart').innerHTML = '';
@@ -647,7 +651,7 @@ function drawSF() {
     leftPriceScale: {visible: true, borderVisible: false}, rightPriceScale: {borderVisible: false}});
   const cap = sfc.addLineSeries({color: css('--ink'), lineWidth: 2, priceScaleId: 'left', priceLineVisible: false, title: '시가총액(억)'});
   cap.setData(v.t.map((d, i) => ({time: d, value: v.cap[i]})));
-  const os = sfc.addLineSeries({color: '#e0343a', lineWidth: 2, priceScaleId: 'right', priceLineVisible: false, title: '수급오실레이터(%)'});
+  const os = sfc.addLineSeries({color: '#e0343a', lineWidth: 2.5, priceScaleId: 'right', priceLineVisible: false, title: '수급 오실레이터(외+기)'});
   os.setData(v.t.map((d, i) => ({time: d, value: v.osc[i]})));
   const ri = RSI && RSI.industries[sfSel.replace(/^\[.*?\] /, '')];
   if (ri && ri.line) {  // 코스피 대비 RS 라인 (1년 전 = 100)
@@ -655,7 +659,7 @@ function drawSF() {
     sfc.priceScale('rs').applyOptions({visible: false, scaleMargins: {top: 0.1, bottom: 0.1}});
     rl.setData(RSI.t.map((x, i) => ({time: `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6, 8)}`, value: ri.line[i]})).filter(o => o.value != null && o.time >= t0));
   }
-  os.createPriceLine({price: 0, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: false});
+  oscBands(os);
   sfc.timeScale().fitContent();
 }
 setTimeout(initSector);
@@ -681,18 +685,18 @@ function makeCharts() {
 }
 function drawFlow(s, base) {
   const el = $('#flowc');
-  if (!s.pf) { el.classList.remove('on'); $('#flowleg').innerHTML = ''; return; }
+  if (!s.pf && !s.ms) { el.classList.remove('on'); $('#flowleg').innerHTML = ''; return; }
   el.classList.add('on');
   fc = LightweightCharts.createChart(el, {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
     grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, rightPriceScale: {borderVisible: false}, crosshair: {mode: 0},
     autoSize: true, timeScale: {visible: false}});
   const mk = (vals, color, w) => { const l = fc.addLineSeries({color, lineWidth: w, priceLineVisible: false, lastValueVisible: true});
     l.setData(s.t.map((d, i) => vals[i] == null ? null : {time: d, value: vals[i]}).filter(Boolean)); return l; };
-  const lf = mk(s.pf, '#e0343a', 2); mk(s.po, '#2f6fe0', 1.5);
+  const lf = s.ms ? mk(s.ms, '#e0343a', 2.5) : mk(s.pf, '#e0343a', 2); if (s.ms) { mk(s.mf, '#f59e0b', 1); mk(s.mo, '#2f6fe0', 1); } else mk(s.po, '#2f6fe0', 1.5);
   [[75, '과열권'], [25, '바텀권']].forEach(([v, t]) => lf.createPriceLine({price: v, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: t}));
   lf.applyOptions({autoscaleInfoProvider: () => ({priceRange: {minValue: 0, maxValue: 100}})});
   [pc, rc].forEach(ch => ch.timeScale().subscribeVisibleLogicalRangeChange(r => r && fc && fc.timeScale().setVisibleLogicalRange(r)));
-  $('#flowleg').innerHTML = '<b style="color:#e0343a">━ 외국인</b> · <b style="color:#2f6fe0">━ 기관</b> 수급 위치 P(20일 순매수÷시총의 최근 80일 백분위) · P≤25 바텀권 = 단기 수급 비움 · P≥75 과열권';
+  $('#flowleg').innerHTML = '수급 오실레이터 = 누적 순매수 금액을 최근 4개월(80거래일) 최저~최고로 0~100 스케일링 · <b style="color:#e0343a">━ 외+기</b> · <b style="color:#f59e0b">─ 외국인</b> · <b style="color:#2f6fe0">─ 기관</b> · 25 이하 바텀권(수급 비움) · 75 이상 과열권';
 }
 const sma = (c, n) => c.map((_, i) => i < n - 1 ? null : c.slice(i - n + 1, i + 1).reduce((a, b) => a + b, 0) / n);
 const ema = (c, n) => { const k = 2 / (n + 1); let e = c[0]; return c.map((x, i) => (e = i ? x * k + e * (1 - k) : x)); };
@@ -758,7 +762,7 @@ function toWeekly(s) {
     else { const j = out.t.length - 1; out.h[j] = Math.max(out.h[j], s.h[i]); out.l[j] = Math.min(out.l[j], s.l[i]); out.c[j] = s.c[i]; out.v[j] += s.v[i]; }
   });
   if (s.pf) { const m = {}; s.t.forEach((d, i) => { const dt = new Date(d + 'T00:00:00Z'); const k = new Date(dt - ((dt.getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10); m[k] = i; });
-    const idx = Object.values(m); out.pf = idx.map(i => s.pf[i]); out.po = idx.map(i => s.po[i]); }
+    const idx = Object.values(m); out.pf = idx.map(i => s.pf[i]); out.po = idx.map(i => s.po[i]); if (s.ms) { out.ms = idx.map(i => s.ms[i]); out.mf = idx.map(i => s.mf[i]); out.mo = idx.map(i => s.mo[i]); } }
   out.r = wilder(out.c, 14); return out;
 }
 function wilder(c, n) {
