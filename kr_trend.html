@@ -239,6 +239,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <div class="view" id="v-flow">
   <section class="card" id="pfcard" style="display:none"></section>
   <section class="card" id="ifcard" style="display:none"></section>
+  <section class="card" id="dtcard" style="display:none"></section>
   <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종·종목 수급 오실레이터 <span class="sub">수급오실레이터 = (외국인+기관 5일 순매수 ÷ 시총)의 MACD(12,26,9) 히스토그램 · 현재 수급 위치 P = 최근 60일 중 퍼센타일 · P≤25 바텀권(수급 비움) / P≥75 과열권 (태린이아빠 원본 공식)</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button><button data-k="종목">종목</button></div><div class="seg" id="sfbase" style="display:none"><button data-b="1" class="on">외+기 기준</button><button data-b="2">외국인</button><button data-b="3">기관</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div><div id="sfind"></div></section>
   </div>
   <div class="view" id="v-list">
@@ -650,6 +651,7 @@ async function initInstTable() {
   try { IFT = await (await fetch(`${META.charts}/inst_flow_table.json`)).json(); } catch (e) { return; }
   $('#ifcard').style.display = '';
   renderInstTable();
+  renderDayTop();
 }
 function renderInstTable() {
   const J = IFT, W = [[20, '1개월'], [5, '1주'], [1, '당일']], K = [['pe', '사모'], ['tr', '투신']];
@@ -676,6 +678,24 @@ function renderInstTable() {
   $('#ifcard tbody').onclick = e => { const t = e.target.closest('tr[data-c]'); if (t && typeof openStock === 'function') openStock(t.dataset.c); };
 }
 setTimeout(initInstTable);
+// ── 시가총액 대비 매수 50등 (당일) — 태린이아빠 대시보드 '개별 수급 동향 체크'와 같은 정의 (inst_top50.py daytop) ──
+let DTK = 'pe', DTD = null;
+function renderDayTop() {
+  if (!IFT || !IFT.daytop) return;
+  const D = IFT.daytop[DTK] || {}, dates = Object.keys(D).sort();
+  if (!DTD || !D[DTD]) DTD = dates[dates.length - 1];
+  const L = D[DTD] || [], fd = d => `${d.slice(4, 6)}/${d.slice(6, 8)}`, nm = {pe: '사모', tr: '투신', pn: '연기금'}[DTK];
+  const sig = c => { const r = IFT.rows[c]; if (!r) return ''; return (r.star ? '<b style="color:#e0343a">★</b> ' : '') + (r.pe20s ? '<span class="tg" style="color:#e0343a;border-color:#e0343a">사모 1개월 유의미</span> ' : '') + (r.tr20s ? '<span class="tg" style="color:#4f46e5;border-color:#4f46e5">투신 1개월 유의미</span>' : ''); };
+  $('#dtcard').style.display = '';
+  $('#dtcard').innerHTML = `<div class="sec-h"><span class="dot"></span>시가총액 대비 매수 50등 — 당일 <span class="sub">그날 ${nm} 총매수 금액 ÷ 시가총액(그날 종가 기준) × 100 · 스팩 제외 · 시총 하한 없음 · 태린이아빠 대시보드와 같은 정의(그쪽은 조회 시점 시가로 시총을 잡아 소수점 차이가 날 수 있음)</span></div>
+    <div class="filters" style="padding:8px 18px 0"><div class="seg" id="dtk">${[['pe', '사모'], ['tr', '투신'], ['pn', '연기금']].map(([k, t]) => `<button data-k="${k}" class="${DTK === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="seg" id="dtd">${dates.map(d => `<button data-d="${d}" class="${DTD === d ? 'on' : ''}">${fd(d)}</button>`).join('')}</div><span class="sub">${L.length}종목 · 종목을 누르면 차트</span></div>
+    <div style="overflow:auto;max-height:520px;padding:6px 18px 16px"><table class="rmt"><thead><tr><th>순위</th><th style="text-align:left">종목</th><th style="text-align:left">업종</th><th>시가총액(억)</th><th>${nm} 매수(억)</th><th>${nm} 시총대비(%)</th><th style="text-align:left" title="1개월(20일) 유의미 매수 여부 · ★ = 사모 유의미 + 가속 + 외국인 지분 증가">1개월 신호</th></tr></thead><tbody>
+    ${L.map((r, i) => `<tr data-c="${r[0]}" style="cursor:pointer"><td>${i + 1}</td><td style="text-align:left"><b style="text-decoration:underline dotted">${r[1]}</b> <span class="sub">${r[0]}</span></td><td style="text-align:left" class="sub">${r[2]}</td><td>${r[3].toLocaleString('ko-KR', {maximumFractionDigits: 2})}</td><td>${r[4].toFixed(2)}</td><td><b>${r[5].toFixed(5)}</b></td><td style="text-align:left">${sig(r[0])}</td></tr>`).join('')}</tbody></table></div>`;
+  $('#dtk').onclick = e => { const b = e.target.closest('button'); if (b) { DTK = b.dataset.k; renderDayTop(); } };
+  $('#dtd').onclick = e => { const b = e.target.closest('button'); if (b) { DTD = b.dataset.d; renderDayTop(); } };
+  $('#dtcard tbody').onclick = e => { const t = e.target.closest('tr[data-c]'); if (t && typeof openStock === 'function') openStock(t.dataset.c); };
+}
 // ── 사모투신 수급 전략 — 모의투자 1,000만원 (research/paper_pe_flow.py → paper_pe_flow.json) ──
 async function initPeFlow() {
   if (META.market !== 'KR') return;
