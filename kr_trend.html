@@ -218,12 +218,12 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
 <body>
 <div class="topbar"><div class="in">
   <div class="brand"><i></i>My Dash</div>
-  <nav class="navs"><a href="index.html">국내 다이버전스</a><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="us_div.html">미국 다이버전스</a></nav>
+  <nav class="navs"><a href="index.html">국내 다이버전스</a><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="us_div.html">미국 다이버전스</a><a href="pe_flow.html">사모투신 수급전략</a></nav>
   <div class="sq" id="sqbox" style="display:none"><input id="sq" type="search" placeholder="종목 검색 (이름·코드)" autocomplete="off"><div id="sqlist"></div></div>
   <span class="day" id="day"></span>
 </div></div>
 <div class="wrap">
-  <div class="pagehead"><h1 id="ttl">미국 추세·눌림목</h1><div class="vtabs" id="vtabs"><button data-v="sum" class="on">오늘의 판단</button><button data-v="list">종목</button><button data-v="flow" id="vtFlow">수급</button></div><div class="mstrip" id="mstrip"></div></div>
+  <div class="pagehead"><h1 id="ttl">미국 추세·눌림목</h1><div class="vtabs" id="vtabs"><button data-v="sum" class="on">오늘의 판단</button><button data-v="list">종목</button><button data-v="flow" id="vtFlow">수급</button><button data-v="pe" id="vtPe" style="display:none">사모투신 수급전략</button></div><div class="mstrip" id="mstrip"></div></div>
   <div class="view on" id="v-sum">
   <section class="card"><div class="sec-h"><span class="dot"></span>오늘의 시장 <span class="sub">시장 방향(M)</span></div><div id="market"></div></section>
   <section class="card" id="regcard" style="display:none"></section>
@@ -236,6 +236,11 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <div id="overview" style="display:contents"></div>
   </div>
   <div class="view" id="v-stock"><section class="card" id="stockcard"></section></div>
+  <div class="view" id="v-pe">
+  <section class="card" id="pecard" style="display:none"></section>
+  <section class="card" id="peetf" style="display:none"></section>
+  <section class="card" id="peglos" style="display:none"></section>
+  </div>
   <div class="view" id="v-flow">
   <section class="card" id="pfcard" style="display:none"></section>
   <section class="card" id="ifcard" style="display:none"></section>
@@ -729,6 +734,122 @@ async function initPeFlow() {
   $('#pfcard').onclick = e => { const t = e.target.closest('tr[data-c]'); if (t && typeof openStock === 'function') openStock(t.dataset.c); };
 }
 setTimeout(initPeFlow);
+// ── 사모투신 수급 전략 페이지: 전략 요약·오늘 신호·후보·검증 이력 (결과 카드 #pfcard 바로 아래) ──
+async function initPeStrategy() {
+  if (META.market !== 'KR') return;
+  let J, T;
+  try { [J, T] = await Promise.all([fetch(`${META.charts}/paper_pe_flow.json`, {cache: 'no-store'}).then(r => r.json()), fetch(`${META.charts}/inst_flow_table.json`, {cache: 'no-store'}).then(r => r.json())]); } catch (e) { return; }
+  let EM = {}; try { EM = (await (await fetch(`${META.charts}/etf_sector_rs.json`, {cache: 'no-store'})).json()).stock_map || {}; } catch (e) {}
+  const fd = d => d ? `${String(d).slice(4, 6)}/${String(d).slice(6, 8)}` : '', won = v => Math.round(v).toLocaleString('ko-KR');
+  const held = new Set((J.positions || []).map(p => p.code));
+  const todayIn = (J.positions || []).filter(p => String(p.date) === String(J.date)), todayOut = (J.trades || []).filter(t => String(t.exit_date) === String(J.date));
+  const gr = o => o.acc && (o.fr20 || 0) > 0 ? 'S' : (o.acc || (o.fr20 || 0) > 0) ? 'A' : 'B';
+  const gcol = {S: '#e0343a', A: '#4f46e5', B: '#9aa0aa'};
+  const cands = Object.entries(T.rows).filter(([c, o]) => o.pe20s).map(([c, o]) => ({c, ...o, g: gr(o)})).sort((a, b) => ('SAB'.indexOf(a.g) - 'SAB'.indexOf(b.g)) || (b.pe20[1] - a.pe20[1]));
+  const tag = g => `<span class="tg" style="color:${gcol[g]};border-color:${gcol[g]}">${g}급</span>`;
+  const bt = [['사모 유의미 매수 전체 (970건)', '+4.2%', '34%', '3.1', '2024 +2.4% · 2025 +6.6%', '—'],
+    ['S급: 사모 가속 + 외국인 지분 증가', '<b class="up">+10.4%</b>', '38%', '3.9', '2024 +6.5% · 2025 +15.4%', '원금 4%'],
+    ['A급: 둘 중 하나', '+3.8%', '35%', '—', '2024 +1.9% · 2025 +6.3%', '원금 1%'],
+    ['B급: 둘 다 아님', '<b class="down">−1.7%</b>', '26%', '—', '두 해 모두 −', '제외'],
+    ['비교: +10% 익절 / −5% 손절 고정', '0.0%', '35%', '1.8', '', '쓰지 않음'],
+    ['비교: 사모·투신 동시 신호', '+6.4%', '37%', '3.2', '두 해 모두 +', '보완 후보'],
+    ['비교: 판정 기간 5일로 단축', '+2.3%', '—', '—', 'MDD 두 배', '쓰지 않음']];
+  $('#pecard').style.display = '';
+  $('#pecard').innerHTML = `<div class="sec-h"><span class="dot"></span>전략 요약 · 오늘 신호 <span class="sub">기준 ${fd(J.date)} 종가</span></div>
+    <div style="margin:4px 18px 10px;padding:12px 14px;border-left:3px solid #e0343a;background:rgba(224,52,58,.05);border-radius:8px;line-height:1.75;font-size:13.5px">
+      <b>아이디어</b>: 사모펀드가 체급보다 크게, 한 달 동안 꾸준히 사기 시작한 종목을 따라 산다. 진입은 <b>수급</b>으로 고르고, 청산은 <b>가격 추세</b>에 맡긴다 — 손실은 짧게(−12%), 수익은 길게(추세 이탈까지).</div>
+    <div class="kpis">
+      <div class="kpi"><div class="sub">진입 신호</div><b style="font-size:15px">사모 '유의미 매수' 새로 켜짐</b><div class="sub">20일 체급 3배↑ · 순매수 ≥ 시총 0.5% · 12일↑ 순매수 · 시총 500억↑ · 거래대금 10억↑</div></div>
+      <div class="kpi"><div class="sub">비중</div><b style="font-size:15px">S급 4% · A급 1% · B급 제외</b><div class="sub">한 종목 최대 10% · 최대 50종목</div></div>
+      <div class="kpi"><div class="sub">청산 (종가)</div><b style="font-size:15px">5&lt;10&lt;20&lt;60 이탈 · −12% · 60일</b><div class="sub">추가 매수·물타기 없음 · 편도 비용 0.15%</div></div>
+      <div class="kpi"><div class="sub">백테스트 (2024-01~2025-10, 5천만원)</div><b style="font-size:15px" class="up">+84.5% · MDD −15%</b><div class="sub">같은 기간 KOSPI +64% · 승률 35~38%, 손익비 3~4</div></div>
+    </div>
+    <div style="padding:4px 18px 0"><b>오늘(${fd(J.date)}) 신호</b></div>
+    <div class="sub" style="padding:2px 18px 8px;line-height:1.8">진입 ${todayIn.length}종목: ${todayIn.map(p => `${tag(p.grade)} <b data-c="${p.code}" style="cursor:pointer;text-decoration:underline dotted">${p.name}</b> ${won(p.entry)}원×${p.sh}주`).join(' · ') || '없음'}<br>
+      청산 ${todayOut.length}종목: ${todayOut.map(t => `<b>${t.name}</b> ${t['ret%']}% (${t.why})`).join(' · ') || '없음'}<br>
+      건너뛴 신호 ${(J.skipped || []).length}개: ${(J.skipped || []).slice(0, 8).map(([n, w]) => `${n}(${w})`).join(', ') || '없음'}${(J.skipped || []).length > 8 ? ' …' : ''}</div>
+    <div style="padding:4px 18px 0"><b>지금 사모 유의미 매수 중인 종목 ${cands.length}개</b> <span class="sub">등급순 · 종목을 누르면 차트</span></div>
+    <div style="overflow:auto;max-height:360px;padding:4px 18px 8px"><table class="rmt"><thead><tr><th>등급</th><th style="text-align:left">종목</th><th style="text-align:left">업종</th><th>사모 20일 (시총 대비·체급·일수)</th><th>사모 가속</th><th>외국인 지분 20일</th><th>50등 일수</th><th style="text-align:left" title="DART 2025 사업보고서 '주요 제품' 매출 구성으로 정한 업종 · % = 그 업종 매출 비중">실제 사업(DART)</th><th style="text-align:left" title="실제 사업 업종의 ETF(없으면 ETF 구성종목·6개월 수익률 상관) · RS = ETF Mansfield RS 정규화 · '시장은' = 주가가 실제로 같이 움직이는 ETF가 다를 때">업종 ETF</th><th>20일 주가</th><th>상태</th></tr></thead><tbody>
+      ${cands.map(o => `<tr data-c="${o.c}" style="cursor:pointer"><td>${tag(o.g)}</td><td style="text-align:left"><b>${o.n}</b> <span class="sub">${o.c}</span></td><td style="text-align:left" class="sub">${o.i || ''}</td><td>+${o.pe20[1]}bp · ${o.pe20[2]}배 · ${o.pe20[3]}/20</td><td>${o.acc ? '<b class="up">가속</b>' : '<span class="sub">감속</span>'}</td><td class="${(o.fr20 || 0) > 0 ? 'up' : 'down'}">${o.fr20 == null ? '–' : (o.fr20 > 0 ? '+' : '') + o.fr20 + '%p'}</td><td>${o.pe50 ? o.pe50[0] : 0}/20</td><td style="text-align:left;white-space:nowrap;font-size:12px">${EM[o.c] && EM[o.c][5] ? `<b>${EM[o.c][5]}</b>${EM[o.c][1] === 'DART 매출' && EM[o.c][2] ? ` <span class="sub">${EM[o.c][2]}%</span>` : ''}` : '<span class="sub">–</span>'}</td><td style="text-align:left;white-space:nowrap;font-size:12px">${EM[o.c] ? `${EM[o.c][0]} <span class="sub">RS ${EM[o.c][4] ?? '–'}${EM[o.c][6] && EM[o.c][6][0] !== EM[o.c][0] ? ` · 시장은 ${EM[o.c][6][0]}` : ''}</span>` : '<span class="sub">–</span>'}</td><td class="${o.d20 > 0 ? 'up' : 'down'}">${o.d20 ?? '–'}%</td><td>${held.has(o.c) ? '<b>보유 중</b>' : o.g === 'B' ? '<span class="sub">제외(B급)</span>' : '<span class="sub">신호 지남</span>'}</td></tr>`).join('')}</tbody></table></div>
+    <div style="padding:4px 18px 0"><b>검증 이력</b> <span class="sub">사모 신호 2024-01~2025-07 · D+1 종가 진입 · 추세 청산 · 거래당 평균</span></div>
+    <div style="overflow:auto;padding:4px 18px 6px"><table class="rmt"><thead><tr><th style="text-align:left">구분</th><th>거래당</th><th>승률</th><th>손익비</th><th>연도별</th><th>전략 반영</th></tr></thead><tbody>${bt.map(r => `<tr><td style="text-align:left">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td></tr>`).join('')}</tbody></table></div>
+    <div class="sub" style="padding:0 18px 14px;line-height:1.7">확인한 것: 사모가 팔기 시작할 때 청산하면 수익이 줄어듦(가격 추세 청산이 최선) · 연기금·3기관 합의·미국 위험신호는 도움 안 됨 · 남는 현금을 지수 IBS 50% + 추세 조건 KODEX 200 50%에 두면 +113%·MDD −16%(미적용)<br>
+      <b>보류 중</b>: 업종 소르티노 상위 1/3 비중 1.5배(+79% → +101%) — 키움 2010~ 수급 백필 후 14년치로 재검증한 뒤 결정 · 현재 검증은 1.6년치(2025 상승장 비중 큼), 상장폐지 종목 미포함</div>`;
+  $('#pecard').onclick = e => { const t = e.target.closest('[data-c]'); if (t && typeof openStock === 'function') openStock(t.dataset.c); };
+
+  // ── 이 전략이 쓰는 지표 사전 ──
+  const G = [
+    ['진입', '사모 유의미 매수', '최근 20거래일 동안 ① 체급 대비 3배↑ ② 순매수 ≥ 시가총액의 0.5%(50bp) ③ 20일 중 12일↑ 순매수를 동시에 만족. 셋 다 처음 성립한 날이 신호', '키움 투자자별 매매(사모펀드) · 시총 500억↑', '사모 60일 +8.0%·120일 +10.9%(2024~26, 같은 날 평균 대비)'],
+    ['진입', '체급 대비 (배)', '(사모 그날 총매수 중 이 종목 비중) ÷ (시장 시총 중 이 종목 비중)의 20일 평균. 1배 = 시총만큼, 3배 = 시총보다 3배 크게 삼. 하루만 보면 태린이아빠 대시보드의 \'시총 대비 매수\' 순위와 같은 원리', '총매수 금액', ''],
+    ['진입', '순매수 ÷ 시가총액 (bp)', '20일 순매수(매수 − 매도) ÷ 시가총액. 1bp = 시총의 0.01%. 사고팔기를 반복한 종목을 걸러내고 실제로 쌓인 물량만 셈', '순매수 금액', ''],
+    ['진입', '순매수일', '20거래일 중 사모가 순매수한 날 수. 한 번 크게 산 것과 꾸준히 담는 것을 구분', '', ''],
+    ['필터', '거래대금 하한', '20일 평균 거래대금 10억 미만은 신규 진입하지 않음(기존 보유는 유지)', 'OHLCV', '성과 차이 미미(+84.5% vs +78.8%), 체결 위험 감소'],
+    ['필터', '이미 추세 이탈', '신호일에 이미 5<10<20<60이면 진입하지 않음', '', ''],
+    ['등급', '사모 가속', '최근 5일 사모 순매수 ≥ 20일 순매수의 40% (매수 속도가 빨라지는 중)', '', '가속 +4.8% vs 감속 −0.5% (20일 보유)'],
+    ['등급', '외국인 지분 20일 변화', '외국인 보유 비율(%)의 20거래일 전 대비 변화. 증가면 외국인도 함께 들어오는 중', '네이버 외국인 소진율', '증가 +5.3% vs 감소 −0.1% (40일)'],
+    ['등급', 'S·A·B 등급', 'S = 사모 가속 + 외국인 지분 증가 / A = 둘 중 하나 / B = 둘 다 아님. 비중 S 4% · A 1% · B 제외', '', 'S +10.4% · A +3.8% · B −1.7% (추세 청산)'],
+    ['청산', '추세 이탈 (I4)', '5일선 < 10일선 < 20일선 < 60일선 (60일선까지 역배열) — 종가 기준 판정', '', '익절·손절 8가지 중 최고(건당 +4.2%, 고정 +10%/−5%는 0%)'],
+    ['청산', '손절 −12%', '종가가 진입가 대비 −12% 이하', '', ''],
+    ['청산', '보유 60거래일', '추세가 이어져도 60거래일이 되면 청산하고 신호를 다시 기다림', '', ''],
+    ['참고', '투신 유의미 매수', '체급 3배↑ & 20일 중 12일↑ 순매수 & 순매수 > 0. 사모와 함께 새로 성립하면 \'동시 신호\'', '키움(투신)', '투신 단독 약함(+2.1%) · 동시 신호 +6.4%'],
+    ['참고', '시총 대비 매수 50등 (일수)', '그날 총매수 ÷ 시총 상위 50(스팩 제외)에 최근 20일 중 든 날 수 — 태린이아빠 대시보드 정의', '총매수 금액', '사모 8일+ 건당 +5.2%, 단독 신호로는 기존 기준이 나음'],
+    ['참고', '외국인 20일 순매수', '외국인 20일 순매수 금액 ÷ 시총', '네이버 수급', '순매수 +7.2% vs 순매도 +0.9% (이미 등급에 대부분 반영)'],
+    ['참고', '공포탐욕 (가격 F&G)', 'RSI14·125일 모멘텀·20일 이격·252일 고점 위치·변동성의 252일 백분위 합성. 0 극단 공포 ~ 100 극단 탐욕', 'KOSPI·KOSDAQ 지수', '공포 속 사모 신호 성과가 더 좋았음(KOSPI 60일선 아래 승률 51·65% vs 46·54%)'],
+    ['참고', '업종 ETF Mansfield RS', '(ETF ÷ KOSPI) ÷ 그 비율의 126일 이동평균 − 1 (%). 0~100 정규화 = 100 / (1 + e^(−RS/12)) — 태린이아빠 공식', '네이버 ETF 일별 시세', '재현 확인: KIWOOM 의료AI 30.46 / 92.68 일치'],
+    ['참고', '업종 ETF Sortino · ETR Comfort', 'Sortino = 6개월 일간수익 연환산 평균 ÷ 하방 표준편차. ETR = CAGR ÷ (|MDD| × 변동성). 10·20·50일선 위 ETF만 순위', '같음', ''],
+    ['참고', '업종 쏠림지수', '6개월 수익 순위 점수 × 6개월 수익의 표준편차 × 100. 35↑이면 소수 업종 쏠림·과열', '원본 42개 ETF', ''],
+    ['참고', '실제 사업 업종 (DART)', '2025 사업보고서 「주요 제품 및 서비스」 표의 품목·용도·매출 비중 → 키워드 규칙으로 39개 업종 배정 → 매출 비중 합이 가장 큰 업종. 제품명이 「반도체 장비」뿐이면 사업 개요로 전·후공정 구분, 금융·리츠는 회사명으로 보정', 'DART 사업보고서 원문', '기존 네이버 업종보다 세분(전공정·후공정·소재 등)'],
+    ['참고', '종목 → 업종 ETF', '① 실제 사업 업종의 ETF ② 없으면 그 ETF 구성종목(편입 비중 최대) ③ 없으면 6개월 일간수익 상관 최고(0.5↑). 주가가 실제로 같이 움직이는 ETF가 다르면 「시장은」으로 함께 표시', 'DART · ETF 구성종목 · 시세', ''],
+    ['보류', '업종 소르티노 상위 1/3', '업종 지수 6개월 수익 ÷ 하락 변동성의 업종 간 순위. 상위 1/3이면 비중 1.5배', '네이버 업종 시총가중 지수', '+79% → +101% (14년 재검증 후 결정)'],
+  ];
+  const ccol = {진입: '#e0343a', 필터: '#c98500', 등급: '#4f46e5', 청산: '#1b9e6c', 참고: '#9aa0aa', 보류: '#2f6fe0'};
+  $('#peglos').style.display = '';
+  $('#peglos').innerHTML = `<div class="sec-h"><span class="dot"></span>이 전략이 쓰는 지표 <span class="sub">진입·필터·등급·청산은 실제 매매 규칙, 참고·보류는 판단 보조(매매 규칙 아님)</span></div>
+    <div style="overflow:auto;padding:4px 18px 16px"><table class="rmt"><thead><tr><th>역할</th><th style="text-align:left">지표</th><th style="text-align:left">정의</th><th style="text-align:left">데이터</th><th style="text-align:left">검증 결과</th></tr></thead><tbody>
+    ${G.map(r => `<tr><td><span class="tg" style="color:${ccol[r[0]]};border-color:${ccol[r[0]]}">${r[0]}</span></td><td style="text-align:left;white-space:nowrap"><b>${r[1]}</b></td><td style="text-align:left;line-height:1.6">${r[2]}</td><td style="text-align:left" class="sub">${r[3]}</td><td style="text-align:left" class="sub">${r[4]}</td></tr>`).join('')}</tbody></table></div>`;
+}
+setTimeout(initPeStrategy);
+// ── 업종 ETF 강도 (태린이아빠 '한국 ETF 소르티노 및 상대강도' 재현, research/etf_sector_rs.py) ──
+let ETFJ = null, ETFM = 'sortino', ETFMA = 20;
+async function initPeEtf() {
+  if (META.market !== 'KR') return;
+  try { ETFJ = await (await fetch(`${META.charts}/etf_sector_rs.json`, {cache: 'no-store'})).json(); } catch (e) { return; }
+  renderPeEtf();
+}
+function renderPeEtf() {
+  const J = ETFJ, days = Object.keys(J.tables[`${ETFM}_${ETFMA}`]).sort(), last = days[days.length - 1];
+  const fd = d => `${String(d).slice(4, 6)}/${String(d).slice(6, 8)}`, ex = new Set(J.extra || []);
+  const nm = n => `${n}${ex.has(n) ? ' <span class="sub">+</span>' : ''}`;
+  const cr = J.crowding || [], crv = cr.length ? cr[cr.length - 1][1] : null;
+  const T = J.tables[`${ETFM}_${ETFMA}`];
+  const mlab = {sortino: 'Sortino', etr: 'ETR Comfort', vam: '변동성 조정 모멘텀'}[ETFM];
+  $('#peetf').style.display = '';
+  $('#peetf').innerHTML = `<div class="sec-h"><span class="dot"></span>업종 ETF 강도 <span class="sub">태린이아빠 '한국 ETF 소르티노 및 상대강도'와 같은 공식 · 원본 42개 + 업종 보강 ${ex.size}개(+ 표시) · 기준 ${fd(J.date)}</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="sub">업종 쏠림지수 (6개월 수익 기반)</div><b style="font-size:22px;color:${crv >= 35 ? '#e0343a' : 'inherit'}">${crv ?? '–'}</b><div class="sub">${crv >= 35 ? '과열·쏠림' : '비과열·확산'} · 35↑ 과열</div></div>
+      <div class="kpi"><div class="sub">ETF Breadth (이평선 위 비율)</div><b style="font-size:16px">10일 ${J.breadth[10]}% · 20일 ${J.breadth[20]}% · 50일 ${J.breadth[50]}% · 120일 ${J.breadth[120]}%</b></div>
+      <div class="kpi"><div class="sub">6개월 주도 업종</div><b style="font-size:13px">${(J.leaders || []).slice(0, 5).map(([n, v]) => `${n} ${v > 0 ? '+' : ''}${v}%`).join('<br>')}</b></div>
+      <div class="kpi"><div class="sub">6개월 소외 업종</div><b style="font-size:13px">${(J.laggards || []).slice(0, 5).map(([n, v]) => `${n} ${v}%`).join('<br>')}</b></div>
+    </div>
+    <div class="filters" style="padding:6px 18px 0"><div class="seg" id="etfm">${[['sortino', 'Sortino'], ['etr', 'ETR Comfort'], ['vam', '변동성 조정 모멘텀']].map(([k, t]) => `<button data-k="${k}" class="${ETFM === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+      <div class="seg" id="etfma">${[10, 20, 50].map(m => `<button data-m="${m}" class="${ETFMA === m ? 'on' : ''}">${m === 50 ? '10주선(50일)' : m + '일선'} 위</button>`).join('')}</div></div>
+    <div style="padding:6px 18px 0"><b>최근 10일 ${mlab} Top 20</b> <span class="sub">${ETFMA}일선 위 ETF만 · 6개월(126거래일)</span></div>
+    <div style="overflow:auto;padding:4px 18px 8px"><table class="rmt"><thead><tr><th>날짜</th>${Array.from({length: 10}, (_, i) => `<th>${i + 1}</th>`).join('')}</tr></thead><tbody>
+      ${days.slice().reverse().map(d => `<tr><td>${fd(d)}</td>${Array.from({length: 10}, (_, i) => `<td style="white-space:nowrap;font-size:12px">${T[d][i] ? nm(T[d][i][0]) : '<span class="sub">–</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;padding:4px 18px 16px">
+      <div><b>Mansfield RS (126일)</b> <span class="sub">(ETF ÷ KOSPI) ÷ 126일 평균 − 1 · 0~100 정규화</span>
+        <div style="overflow:auto;max-height:340px"><table class="rmt"><thead><tr><th>#</th><th style="text-align:left">ETF</th><th>RS(%)</th><th>정규화</th></tr></thead><tbody>
+        ${J.mansfield.map((r, i) => `<tr><td>${i + 1}</td><td style="text-align:left">${nm(r[0])}</td><td class="${r[1] > 0 ? 'up' : 'down'}">${r[1]}</td><td><b>${r[2]}</b></td></tr>`).join('')}</tbody></table></div></div>
+      <div><b>Sortino(10주선 위) 상위 — 30일 이격도 과열 점검</b> <span class="sub">현재 30일선 초과 ÷ 최근 247일 97% 분위 · 100% 넘으면 과열</span>
+        <div style="overflow:auto;max-height:340px"><table class="rmt"><thead><tr><th>#</th><th style="text-align:left">ETF</th><th>Sortino</th><th>30일 이격</th><th>97% 분위</th><th>위치</th></tr></thead><tbody>
+        ${(J.gap30 || []).map(r => `<tr><td>${r[0]}</td><td style="text-align:left">${nm(r[1])}</td><td>${r[2]}</td><td>${r[3]}%</td><td>${r[4]}%</td><td style="color:${r[5] >= 100 ? '#e0343a' : 'inherit'}"><b>${r[5] ?? '–'}%</b></td></tr>`).join('') || '<tr><td colspan="6" class="empty">10주선 위 ETF 없음</td></tr>'}</tbody></table></div></div>
+    </div>`;
+  $('#etfm').onclick = e => { const b = e.target.closest('button'); if (b) { ETFM = b.dataset.k; renderPeEtf(); } };
+  $('#etfma').onclick = e => { const b = e.target.closest('button'); if (b) { ETFMA = +b.dataset.m; renderPeEtf(); } };
+}
+setTimeout(initPeEtf);
+
+
 // ── 오늘 신규 추세 진입 / 추세 이탈 (research/trend_events_daily.py — 그날 18:30까지 데이터, 종가 기준) ──
 async function initTrendToday() {
   let D; try { D = await (await fetch(`${META.charts}/trend_today.json`)).json(); } catch (e) { return; }
@@ -879,6 +1000,7 @@ async function openStock(code) {
   const v = (SIDX || {})[code] || [code, '', '', 0, false];
   const [rsj, etf, ind, rm] = await Promise.all([getJ('_RSJ', 'rs_index.json'), getJ('_ETF', 'etf_exposure.json'), getJ('_IND2', 'industry_topdown.json'), RM ? Promise.resolve(RM) : getJ('_RM', 'report_momentum.json')]);
   const row = DATA.rows.find(r => r.code === code), rs = rsj && rsj.stocks[code], ef = etf && etf.stocks[code];
+  const DIJ = META.market === 'KR' ? await getJ('_DI', 'dart_industry.json') : null, di = DIJ && DIJ[code];
   const iname = ind && ind.stock_industry[code], idd = ind && iname ? ind.industries.find(x => x.industry === iname) : null;
   const rmx = rm && rm.stocks.find(x => x.code === code);
   const RGc = {'주도': '#e0343a', '이익 선행': '#c98500', '추세만': '#4f46e5', '소외': '#9aa0aa'}, GC = {A: '#e0343a', B: '#4f46e5', '경고': '#2f6fe0', C: '#9aa0aa'};
@@ -897,6 +1019,7 @@ async function openStock(code) {
     <div class="skv">
       ${sec('수급 (태린이아빠 수급오실레이터)', '<div id="sflowtxt" class="sub">불러오는 중…</div>')}
       ${sec('시장 대비 상대강도', rsHtml)}
+      ${di ? sec('실제 사업 (DART 사업보고서 매출 구성)', `<b>${di.sector || '판정 못 함'}</b>${di.share ? ` · 매출의 ${di.share}%` : ''}${di.etf ? ` · 업종 ETF ${di.etf}` : ''}<br><span class="sub">${(di.items || []).map(([l, p]) => `${l} ${p}%`).join(' / ') || di.top_item || ''} · ${di.report || ''}</span>`) : ''}
       ${sec('업종 탑다운', indHtml)}
       ${sec('ETF 수급', etfHtml)}
       ${sec('리포트 이익 모멘텀 (최근 20거래일)', repHtml)}
@@ -940,9 +1063,20 @@ setTimeout(initSearch);
 // ---- view switching & detail tabs ----
 let VIEW = 'sum';
 try { VIEW = (location.hash.slice(1) || localStorage.getItem('view') || 'sum'); } catch (e) {}
+// ── 사모투신 수급전략 별도 페이지 모드 (trend_screen.py가 pe_flow.html에 PEMODE=true를 넣음) ──
+if (window.PEMODE) {
+  const vp = document.getElementById('v-pe');
+  vp.prepend(document.getElementById('pfcard'));
+  vp.append(document.getElementById('ifcard'), document.getElementById('dtcard'));
+  document.querySelectorAll('#vtabs button').forEach(b => { b.style.display = b.dataset.v === 'pe' ? '' : 'none'; });
+  $('#ttl').textContent = '사모투신 수급전략';
+  document.title = '사모투신 수급전략';
+  VIEW = 'pe';
+}
 function setView(v) {
   if (!document.getElementById('v-' + v)) v = 'sum';
   if (v === 'flow' && META.market !== 'KR') v = 'sum';
+  if (v === 'pe' && (META.market !== 'KR' || !window.PEMODE)) v = 'sum';
   VIEW = v; document.querySelectorAll('.view').forEach(x => x.classList.toggle('on', x.id === 'v-' + v));
   document.querySelectorAll('#vtabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   try { localStorage.setItem('view', v); history.replaceState(null, '', '#' + v); } catch (e) {}
@@ -955,6 +1089,7 @@ $('#dtabs').onclick = e => { const b = e.target.closest('button'); if (!b) retur
   document.querySelectorAll('#dtabs button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.dpane').forEach(x => x.classList.toggle('on', x.id === 'p-' + b.dataset.p)); };
 if (META.market !== 'KR') $('#vtFlow').style.display = 'none';
+if (META.market !== 'KR') $('#vtPe').style.display = 'none';
 setTimeout(() => setView(VIEW));
 const zbar = p => p == null ? '<span class="sub">–</span>' : `<div class="zwrap"><b class="mk" style="left:${Math.max(0, Math.min(100, p))}%"></b><div class="zbar"><i></i><i></i><i></i><i></i><i></i></div></div>`;
 let SF = null, FI = null, sfKind = '산업군', sfZone = 'all', sfSel = null, sfc = null, sfBase = 1; const FCACHE = {};
