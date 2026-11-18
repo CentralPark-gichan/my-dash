@@ -237,6 +237,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   </div>
   <div class="view" id="v-stock"><section class="card" id="stockcard"></section></div>
   <div class="view" id="v-flow">
+  <section class="card" id="pfcard" style="display:none"></section>
   <section class="card" id="ifcard" style="display:none"></section>
   <section class="card" id="sfcard" style="display:none"><div class="sec-h"><span class="dot"></span>업종·종목 수급 오실레이터 <span class="sub">수급오실레이터 = (외국인+기관 5일 순매수 ÷ 시총)의 MACD(12,26,9) 히스토그램 · 현재 수급 위치 P = 최근 60일 중 퍼센타일 · P≤25 바텀권(수급 비움) / P≥75 과열권 (태린이아빠 원본 공식)</span></div><div class="filters" style="padding:10px 18px 0"><div class="seg" id="sfkind"><button data-k="산업군" class="on">산업군</button><button data-k="업종">업종</button><button data-k="테마">테마</button><button data-k="종목">종목</button></div><div class="seg" id="sfbase" style="display:none"><button data-b="1" class="on">외+기 기준</button><button data-b="2">외국인</button><button data-b="3">기관</button></div><div class="seg" id="sfzone"><button data-z="all" class="on">전체</button><button data-z="bot">바텀권</button><button data-z="top">과열권</button></div><label>검색 <input type="text" id="sfq" placeholder="반도체, 조선…"></label></div><div class="sfgrid"><div class="sflist" id="sflist"></div><div><div id="sftitle" style="font-weight:700;margin-bottom:4px"></div><div id="sfchart"></div><div id="sfzbar" style="margin-top:8px"></div><div class="sub" id="sfmem" style="margin-top:6px"></div></div></div><div id="sfind"></div></section>
   </div>
@@ -675,6 +676,39 @@ function renderInstTable() {
   $('#ifcard tbody').onclick = e => { const t = e.target.closest('tr[data-c]'); if (t && typeof openStock === 'function') openStock(t.dataset.c); };
 }
 setTimeout(initInstTable);
+// ── 사모투신 수급 전략 — 모의투자 1,000만원 (research/paper_pe_flow.py → paper_pe_flow.json) ──
+async function initPeFlow() {
+  if (META.market !== 'KR') return;
+  let J; try { J = await (await fetch(`${META.charts}/paper_pe_flow.json`, {cache: 'no-store'})).json(); } catch (e) { return; }
+  const E = J.equity || [], L = E.length ? E[E.length - 1] : {equity: J.cap0, ret: 0}, won = v => Math.round(v).toLocaleString('ko-KR');
+  const fd = d => d ? `${d.slice(2, 4)}.${d.slice(4, 6)}.${d.slice(6, 8)}` : '';
+  const P = (J.positions || []).slice().sort((a, b) => (a.grade === b.grade ? b['ret%'] - a['ret%'] : a.grade < b.grade ? 1 : -1));
+  const inv = P.reduce((s, p) => s + p.sh * p.last, 0), ret = (L.equity / J.cap0 - 1) * 100;
+  const Tr = (J.trades || []).slice(-15).reverse(), wins = (J.trades || []).filter(t => t.pnl > 0).length;
+  let spark = '';
+  if (E.length > 1) {
+    const v = E.map(e => e.equity), mn = Math.min(...v, J.cap0), mx = Math.max(...v, J.cap0), X = i => 4 + i * 292 / (v.length - 1), Y = x => 46 - (x - mn) / ((mx - mn) || 1) * 40;
+    spark = `<svg viewBox="0 0 300 50" style="width:300px;height:50px"><line x1="0" x2="300" y1="${Y(J.cap0)}" y2="${Y(J.cap0)}" stroke="var(--line)" stroke-dasharray="3 3"/><polyline fill="none" stroke="${ret >= 0 ? '#e0343a' : '#2f6fe0'}" stroke-width="2" points="${v.map((x, i) => `${X(i)},${Y(x)}`).join(' ')}"/></svg>`;
+  }
+  const gtag = g => `<span class="tg" style="color:${g === 'S' ? '#e0343a' : '#4f46e5'};border-color:${g === 'S' ? '#e0343a' : '#4f46e5'}">${g}급</span>`;
+  $('#pfcard').style.display = '';
+  $('#pfcard').innerHTML = `<div class="sec-h"><span class="dot"></span>${J.name} — 모의투자 <span class="sub">${fd(J.start)} 시작 · 원금 ${won(J.cap0)}원 · 기준 ${fd(J.date)} 종가 · ${J.rule}</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="sub">평가액</div><b style="font-size:22px" class="${ret >= 0 ? 'up' : 'down'}">${won(L.equity)}원</b><div class="sub">${ret >= 0 ? '+' : ''}${ret.toFixed(2)}% (${ret >= 0 ? '+' : ''}${won(L.equity - J.cap0)}원)</div></div>
+      <div class="kpi"><div class="sub">보유</div><b style="font-size:22px">${P.length}종목</b><div class="sub">S급 ${P.filter(p => p.grade === 'S').length} · A급 ${P.filter(p => p.grade === 'A').length} · 투입 ${won(inv)}원 (${(inv / L.equity * 100).toFixed(0)}%)</div></div>
+      <div class="kpi"><div class="sub">현금</div><b style="font-size:22px">${won(J.cash)}원</b><div class="sub">신호가 들어올 때마다 S급 40만·A급 10만원씩 투입</div></div>
+      <div class="kpi"><div class="sub">청산 실적</div><b style="font-size:22px">${(J.trades || []).length}건</b><div class="sub">${(J.trades || []).length ? `승률 ${Math.round(wins / J.trades.length * 100)}% · 실현 ${won(J.trades.reduce((s, t) => s + t.pnl, 0))}원` : '아직 청산 없음'} · 백테스트 기대 승률 35~40%·손익비 3~4</div></div>
+      ${spark ? `<div class="kpi"><div class="sub">평가액 추이</div>${spark}</div>` : ''}
+    </div>
+    <div style="overflow:auto;padding:0 18px 8px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>등급</th><th>진입일</th><th>진입가</th><th>현재가</th><th>수량</th><th>평가손익</th><th>수익률</th><th title="진입가 −12% (종가 기준)">손절가</th><th title="최대 60거래일">보유일</th><th style="text-align:left">진입 근거</th></tr></thead><tbody>
+    ${P.map(p => `<tr data-c="${p.code}" style="cursor:pointer" title="눌러서 차트 보기"><td style="text-align:left"><b style="text-decoration:underline dotted">${p.name}</b> <span class="sub">${p.code} · ${p.ind || ''}</span></td><td>${gtag(p.grade)}</td><td>${fd(p.date)}</td><td>${won(p.entry)}</td><td>${won(p.last)}</td><td>${p.sh}</td>
+      <td class="${p.last * p.sh * 0.9985 - p.cost >= 0 ? 'up' : 'down'}">${won(p.last * p.sh * 0.9985 - p.cost)}</td><td class="${p['ret%'] >= 0 ? 'up' : 'down'}"><b>${p['ret%'] > 0 ? '+' : ''}${p['ret%']}%</b></td><td>${won(p.stop)}</td><td>${p.days}/60</td><td style="text-align:left" class="sub">${p.why_in || ''}</td></tr>`).join('') || '<tr><td colspan="11" class="empty">보유 종목 없음</td></tr>'}</tbody></table></div>
+    ${Tr.length ? `<div style="padding:4px 18px 0"><b>최근 청산</b></div><div style="overflow:auto;padding:0 18px 8px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>등급</th><th>진입</th><th>청산</th><th>보유일</th><th>손익</th><th>수익률</th><th style="text-align:left">사유</th></tr></thead><tbody>
+      ${Tr.map(t => `<tr data-c="${t.code}" style="cursor:pointer"><td style="text-align:left"><b>${t.name}</b></td><td>${gtag(t.grade)}</td><td>${fd(String(t.date))} ${won(t.entry)}</td><td>${fd(String(t.exit_date))} ${won(t.exit)}</td><td>${t.days}</td><td class="${t.pnl >= 0 ? 'up' : 'down'}">${won(t.pnl)}</td><td class="${t['ret%'] >= 0 ? 'up' : 'down'}">${t['ret%']}%</td><td style="text-align:left">${t.why}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${(J.skipped || []).length ? `<div class="sub" style="padding:0 18px 14px;line-height:1.6">오늘 건너뛴 신호 ${J.skipped.length}개: ${J.skipped.slice(0, 12).map(([n, w]) => `${n}(${w})`).join(', ')}${J.skipped.length > 12 ? ' …' : ''}</div>` : '<div style="height:10px"></div>'}`;
+  $('#pfcard').onclick = e => { const t = e.target.closest('tr[data-c]'); if (t && typeof openStock === 'function') openStock(t.dataset.c); };
+}
+setTimeout(initPeFlow);
 // ── 오늘 신규 추세 진입 / 추세 이탈 (research/trend_events_daily.py — 그날 18:30까지 데이터, 종가 기준) ──
 async function initTrendToday() {
   let D; try { D = await (await fetch(`${META.charts}/trend_today.json`)).json(); } catch (e) { return; }
