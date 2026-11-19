@@ -715,19 +715,19 @@ async function initPeFlow() {
     const v = E.map(e => e.equity), mn = Math.min(...v, J.cap0), mx = Math.max(...v, J.cap0), X = i => 4 + i * 292 / (v.length - 1), Y = x => 46 - (x - mn) / ((mx - mn) || 1) * 40;
     spark = `<svg viewBox="0 0 300 50" style="width:300px;height:50px"><line x1="0" x2="300" y1="${Y(J.cap0)}" y2="${Y(J.cap0)}" stroke="var(--line)" stroke-dasharray="3 3"/><polyline fill="none" stroke="${ret >= 0 ? '#e0343a' : '#2f6fe0'}" stroke-width="2" points="${v.map((x, i) => `${X(i)},${Y(x)}`).join(' ')}"/></svg>`;
   }
-  const gtag = g => `<span class="tg" style="color:${g === 'S' ? '#e0343a' : '#4f46e5'};border-color:${g === 'S' ? '#e0343a' : '#4f46e5'}">${g}급</span>`;
+  const gtag = g => g === 'IBS' ? '<span class="tg" style="color:#1b9e6c;border-color:#1b9e6c">하락장 IBS</span>' : `<span class="tg" style="color:${g === 'S' ? '#e0343a' : '#4f46e5'};border-color:${g === 'S' ? '#e0343a' : '#4f46e5'}">${g}급</span>`;
   $('#pfcard').style.display = '';
   $('#pfcard').innerHTML = `<div class="sec-h"><span class="dot"></span>${J.name} — 모의투자 <span class="sub">${fd(J.start)} 시작 · 원금 ${won(J.cap0)}원 · 기준 ${fd(J.date)} 종가 · ${J.rule}</span></div>
     <div class="kpis">
       <div class="kpi"><div class="sub">평가액</div><b style="font-size:22px" class="${ret >= 0 ? 'up' : 'down'}">${won(L.equity)}원</b><div class="sub">${ret >= 0 ? '+' : ''}${ret.toFixed(2)}% (${ret >= 0 ? '+' : ''}${won(L.equity - J.cap0)}원)</div></div>
       <div class="kpi"><div class="sub">보유</div><b style="font-size:22px">${P.length}종목</b><div class="sub">S급 ${P.filter(p => p.grade === 'S').length} · A급 ${P.filter(p => p.grade === 'A').length} · 투입 ${won(inv)}원 (${(inv / L.equity * 100).toFixed(0)}%)</div></div>
-      <div class="kpi"><div class="sub">현금</div><b style="font-size:22px">${won(J.cash)}원</b><div class="sub">신호가 들어올 때마다 S급 40만·A급 10만원씩 투입</div></div>
-      <div class="kpi"><div class="sub">청산 실적</div><b style="font-size:22px">${(J.trades || []).length}건</b><div class="sub">${(J.trades || []).length ? `승률 ${Math.round(wins / J.trades.length * 100)}% · 실현 ${won(J.trades.reduce((s, t) => s + t.pnl, 0))}원` : '아직 청산 없음'} · 백테스트 기대 승률 35~40%·손익비 3~4</div></div>
+      <div class="kpi"><div class="sub">현금</div><b style="font-size:22px">${won(J.cash)}원</b><div class="sub">신호마다 평가액의 S 10%·A 4% · 목표 비중 ${J.market ? Math.round(J.market.target * 100) + '%' : '–'}(S8)${(J.ibs_pos || []).length ? ' · 하락장 엔진 보유 ' + J.ibs_pos.map(q => q.name).join(', ') : ''}</div></div>
+      <div class="kpi"><div class="sub">청산 실적</div><b style="font-size:22px">${(J.trades || []).length}건</b><div class="sub">${(J.trades || []).length ? `승률 ${Math.round(wins / J.trades.length * 100)}% · 실현 ${won(J.trades.reduce((s, t) => s + t.pnl, 0))}원` : '아직 청산 없음'} · 백테스트 승률 약 53%(60일 보유)</div></div>
       ${spark ? `<div class="kpi"><div class="sub">평가액 추이</div>${spark}</div>` : ''}
     </div>
-    <div style="overflow:auto;padding:0 18px 8px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>등급</th><th>진입일</th><th>진입가</th><th>현재가</th><th>수량</th><th>평가손익</th><th>수익률</th><th title="진입가 −12% (종가 기준)">손절가</th><th title="최대 60거래일">보유일</th><th style="text-align:left">진입 근거</th></tr></thead><tbody>
+    <div style="overflow:auto;padding:0 18px 8px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>등급</th><th>진입일</th><th>진입가</th><th>현재가</th><th>수량</th><th>평가손익</th><th>수익률</th><th title="60거래일 보유 · 재신호 시 연장">보유일</th><th style="text-align:left">진입 근거</th></tr></thead><tbody>
     ${P.map(p => `<tr data-c="${p.code}" style="cursor:pointer" title="눌러서 차트 보기"><td style="text-align:left"><b style="text-decoration:underline dotted">${p.name}</b> <span class="sub">${p.code} · ${p.ind || ''}</span></td><td>${gtag(p.grade)}</td><td>${fd(p.date)}</td><td>${won(p.entry)}</td><td>${won(p.last)}</td><td>${p.sh}</td>
-      <td class="${p.last * p.sh * 0.9985 - p.cost >= 0 ? 'up' : 'down'}">${won(p.last * p.sh * 0.9985 - p.cost)}</td><td class="${p['ret%'] >= 0 ? 'up' : 'down'}"><b>${p['ret%'] > 0 ? '+' : ''}${p['ret%']}%</b></td><td>${won(p.stop)}</td><td>${p.days}/60</td><td style="text-align:left" class="sub">${p.why_in || ''}</td></tr>`).join('') || '<tr><td colspan="11" class="empty">보유 종목 없음</td></tr>'}</tbody></table></div>
+      <td class="${p.last * p.sh * 0.9985 - p.cost >= 0 ? 'up' : 'down'}">${won(p.last * p.sh * 0.9985 - p.cost)}</td><td class="${p['ret%'] >= 0 ? 'up' : 'down'}"><b>${p['ret%'] > 0 ? '+' : ''}${p['ret%']}%</b></td><td>${p.days}/60</td><td style="text-align:left" class="sub">${p.why_in || ''}</td></tr>`).join('') || '<tr><td colspan="10" class="empty">보유 종목 없음</td></tr>'}</tbody></table></div>
     ${Tr.length ? `<div style="padding:4px 18px 0"><b>최근 청산</b></div><div style="overflow:auto;padding:0 18px 8px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>등급</th><th>진입</th><th>청산</th><th>보유일</th><th>손익</th><th>수익률</th><th style="text-align:left">사유</th></tr></thead><tbody>
       ${Tr.map(t => `<tr data-c="${t.code}" style="cursor:pointer"><td style="text-align:left"><b>${t.name}</b></td><td>${gtag(t.grade)}</td><td>${fd(String(t.date))} ${won(t.entry)}</td><td>${fd(String(t.exit_date))} ${won(t.exit)}</td><td>${t.days}</td><td class="${t.pnl >= 0 ? 'up' : 'down'}">${won(t.pnl)}</td><td class="${t['ret%'] >= 0 ? 'up' : 'down'}">${t['ret%']}%</td><td style="text-align:left">${t.why}</td></tr>`).join('')}</tbody></table></div>` : ''}
     ${(J.skipped || []).length ? `<div class="sub" style="padding:0 18px 14px;line-height:1.6">오늘 건너뛴 신호 ${J.skipped.length}개: ${J.skipped.slice(0, 12).map(([n, w]) => `${n}(${w})`).join(', ')}${J.skipped.length > 12 ? ' …' : ''}</div>` : '<div style="height:10px"></div>'}`;
@@ -743,68 +743,65 @@ async function initPeStrategy() {
   const fd = d => d ? `${String(d).slice(4, 6)}/${String(d).slice(6, 8)}` : '', won = v => Math.round(v).toLocaleString('ko-KR');
   const held = new Set((J.positions || []).map(p => p.code));
   const todayIn = (J.positions || []).filter(p => String(p.date) === String(J.date)), todayOut = (J.trades || []).filter(t => String(t.exit_date) === String(J.date));
-  const gr = o => o.acc && (o.fr20 || 0) > 0 ? 'S' : (o.acc || (o.fr20 || 0) > 0) ? 'A' : 'B';
   const gcol = {S: '#e0343a', A: '#4f46e5', B: '#9aa0aa'};
-  const cands = Object.entries(T.rows).filter(([c, o]) => o.pe20s).map(([c, o]) => ({c, ...o, g: gr(o)})).sort((a, b) => ('SAB'.indexOf(a.g) - 'SAB'.indexOf(b.g)) || (b.pe20[1] - a.pe20[1]));
-  const tag = g => `<span class="tg" style="color:${gcol[g]};border-color:${gcol[g]}">${g}급</span>`;
-  const bt = [['사모 유의미 매수 전체 (970건)', '+4.2%', '34%', '3.1', '2024 +2.4% · 2025 +6.6%', '—'],
-    ['S급: 사모 가속 + 외국인 지분 증가', '<b class="up">+10.4%</b>', '38%', '3.9', '2024 +6.5% · 2025 +15.4%', '원금 4%'],
-    ['A급: 둘 중 하나', '+3.8%', '35%', '—', '2024 +1.9% · 2025 +6.3%', '원금 1%'],
-    ['B급: 둘 다 아님', '<b class="down">−1.7%</b>', '26%', '—', '두 해 모두 −', '제외'],
-    ['비교: +10% 익절 / −5% 손절 고정', '0.0%', '35%', '1.8', '', '쓰지 않음'],
-    ['비교: 사모·투신 동시 신호', '+6.4%', '37%', '3.2', '두 해 모두 +', '보완 후보'],
-    ['비교: 판정 기간 5일로 단축', '+2.3%', '—', '—', 'MDD 두 배', '쓰지 않음']];
+  const tag = g => g ? `<span class="tg" style="color:${gcol[g]};border-color:${gcol[g]}">${g}급</span>` : '<span class="sub">–</span>';
+  const MK = J.market || {}, SG = J.signals || [], IB = MK.ibs || [];
+  const chk = ['매수 쏠림 ov≥5', '외국인 20일 순매수', '투신 20일 순매수', 'KOSPI 60일선 또는 120일선 위', '정배열', '시총 3천억↑'];
+  const bt = [
+    ['사모 엔진 A′안 전체 (2017~, 449건)', '<b class="up">+10.5%</b>', '53%', '90%', '학습/검증 A +9.7% · B +11.4% · C(분기 무작위) +1.7%'],
+    ['└ S급: 52주 고점 −10% 이내', '<b class="up">+11.2%</b>', '55%', '—', '평가액 10%'],
+    ['└ A급: 나머지', '+3.5%', '47%', '—', '평가액 4%'],
+    ['└ 신호일 수급 오실레이터 P≤25 (비어 있음)', '+13.2%', '57%', '—', '세 기간 모두 중간 P보다 높음 (참고)'],
+    ['KOSPI 60·120일선 모두 아래에서 사모 신호', '+2.5%', '44%', '—', '중앙값 −2.8% → 하락장엔 사모 엔진 쉼'],
+    ['포트: 사모 ⑥안 단독 (재투자·S8)', '연복리 22.2%', '—', '—', 'MDD −24.9% · 2022 −10.3%'],
+    ['포트: ⑥안 + 하락장 IBS (현금 50%)', '<b class="up">연복리 28.4%</b>', '—', '—', 'MDD −23.3% · 하락장 구간 +94% (KOSPI −6%)'],
+    ['비교: KOSPI', '연복리 9.7%', '—', '—', 'MDD −45.5%'],
+    ['옛 규칙 (50bp·12일·체급 3배·추세 청산)', '+0.7%', '31%', '57%', '14년 재검증 후 폐기']];
   $('#pecard').style.display = '';
-  $('#pecard').innerHTML = `<div class="sec-h"><span class="dot"></span>전략 요약 · 오늘 신호 <span class="sub">기준 ${fd(J.date)} 종가</span></div>
+  $('#pecard').innerHTML = `<div class="sec-h"><span class="dot"></span>전략 요약 · 오늘 신호 <span class="sub">기준 ${fd(J.date)} 종가 · ${fd(J.rule_v2_from)}부터 새 규칙(사모 A′안 ⑥ + S8 비중 조절 + 하락장 IBS 엔진)</span></div>
     <div style="margin:4px 18px 10px;padding:12px 14px;border-left:3px solid #e0343a;background:rgba(224,52,58,.05);border-radius:8px;line-height:1.75;font-size:13.5px">
-      <b>아이디어</b>: 사모펀드가 체급보다 크게, 한 달 동안 꾸준히 사기 시작한 종목을 따라 산다. 진입은 <b>수급</b>으로 고르고, 청산은 <b>가격 추세</b>에 맡긴다 — 손실은 짧게(−12%), 수익은 길게(추세 이탈까지).</div>
+      <b>아이디어</b>: ① <b>상승·조정장</b> — 사모펀드가 몸집보다 크게 사기 시작한 종목 중 <b>외국인·투신이 함께 사고</b> 이미 <b>정배열</b>인 탄탄한 종목(시총 3천억↑)을 따라 사서 60일 들고 간다. 시장이 흔들리면(변동성↑) 비중을 자동으로 줄인다.
+      ② <b>하락장</b>(KOSPI 60·120일선 모두 아래) — 사모 엔진은 쉬고, 남는 현금 절반으로 지수 레버리지의 <b>장 막판 투매(IBS)</b>를 하루씩 받아낸다.</div>
     <div class="kpis">
-      <div class="kpi"><div class="sub">진입 신호</div><b style="font-size:15px">사모 '유의미 매수' 새로 켜짐</b><div class="sub">20일 체급 3배↑ · 순매수 ≥ 시총 0.5% · 12일↑ 순매수 · 시총 500억↑ · 거래대금 10억↑</div></div>
-      <div class="kpi"><div class="sub">비중</div><b style="font-size:15px">S급 4% · A급 1% · B급 제외</b><div class="sub">한 종목 최대 10% · 최대 50종목</div></div>
-      <div class="kpi"><div class="sub">청산 (종가)</div><b style="font-size:15px">5&lt;10&lt;20&lt;60 이탈 · −12% · 60일</b><div class="sub">추가 매수·물타기 없음 · 편도 비용 0.15%</div></div>
-      <div class="kpi"><div class="sub">백테스트 (2024-01~2025-10, 5천만원)</div><b style="font-size:15px" class="up">+84.5% · MDD −15%</b><div class="sub">같은 기간 KOSPI +64% · 승률 35~38%, 손익비 3~4</div></div>
+      <div class="kpi"><div class="sub">사모 엔진 진입 (모두 충족, 그날 종가)</div><b style="font-size:14px">사모 20일 ≥ 시총 10bp · 8/20일 새로 켜짐</b><div class="sub">+ 쏠림 5배↑ · 외국인·투신 20일 순매수 · KOSPI 60일선 또는 120일선 위 · 정배열 · 시총 3천억↑</div></div>
+      <div class="kpi"><div class="sub">금액 · 청산</div><b style="font-size:15px">S 10% · A 4% · 60일 보유</b><div class="sub">평가액 기준 재투자 · S = 52주 고점 −10% 이내 · 재신호 시 60일 연장 · 최대 20종목</div></div>
+      <div class="kpi"><div class="sub">비중 조절 S8 (오늘)</div><b style="font-size:15px">목표 ${MK.target != null ? Math.round(MK.target * 100) + '%' : '–'}</b><div class="sub">15% ÷ KOSPI 20일 변동성(${MK.rv20 != null ? (MK.rv20 * 100).toFixed(0) + '%' : '–'}) · 30~100% · 고요한 상승 추세면 70% 상한${MK.calm ? ' (적용 중)' : ''}</div></div>
+      <div class="kpi"><div class="sub">시장 국면 (오늘)</div><b style="font-size:15px" class="${MK.mkt_ok ? 'up' : 'down'}">${MK.mkt_ok ? '사모 엔진 가동' : '하락장 → 사모 엔진 쉼, IBS 엔진 대기'}</b><div class="sub">KOSPI 60일선 ${MK.above60 ? '위' : '아래'} · 120일선 ${MK.above120 ? '위' : '아래'}</div></div>
+      <div class="kpi"><div class="sub">하락장 IBS 엔진 (오늘)</div><b style="font-size:14px">${MK.bear ? (IB.some(x => x.signal) ? '매수 신호' : '신호 없음') : '쉼(하락장 아님)'}</b><div class="sub">${IB.map(x => `${x.name} IBS ${x.ibs} · ATR 분위 ${x.atr_pct}${x.signal ? ' ✓' : ''}`).join('<br>') || '–'}<br>매수: IBS&lt;0.25 & ATR 상위 30% → 현금 50% · 다음 날 종가 매도(시가 −3% 손절)</div></div>
     </div>
-    <div style="padding:4px 18px 0"><b>오늘(${fd(J.date)}) 신호</b></div>
+    <div style="padding:4px 18px 0"><b>오늘(${fd(J.date)}) 매매</b></div>
     <div class="sub" style="padding:2px 18px 8px;line-height:1.8">진입 ${todayIn.length}종목: ${todayIn.map(p => `${tag(p.grade)} <b data-c="${p.code}" style="cursor:pointer;text-decoration:underline dotted">${p.name}</b> ${won(p.entry)}원×${p.sh}주`).join(' · ') || '없음'}<br>
-      청산 ${todayOut.length}종목: ${todayOut.map(t => `<b>${t.name}</b> ${t['ret%']}% (${t.why})`).join(' · ') || '없음'}<br>
-      건너뛴 신호 ${(J.skipped || []).length}개: ${(J.skipped || []).slice(0, 8).map(([n, w]) => `${n}(${w})`).join(', ') || '없음'}${(J.skipped || []).length > 8 ? ' …' : ''}</div>
-    <div style="padding:4px 18px 0"><b>지금 사모 유의미 매수 중인 종목 ${cands.length}개</b> <span class="sub">등급순 · 종목을 누르면 차트</span></div>
-    <div style="overflow:auto;max-height:360px;padding:4px 18px 8px"><table class="rmt"><thead><tr><th>등급</th><th style="text-align:left">종목</th><th style="text-align:left">업종</th><th>사모 20일 (시총 대비·체급·일수)</th><th>사모 가속</th><th>외국인 지분 20일</th><th>50등 일수</th><th style="text-align:left" title="DART 2025 사업보고서 '주요 제품' 매출 구성으로 정한 업종 · % = 그 업종 매출 비중">실제 사업(DART)</th><th style="text-align:left" title="실제 사업 업종의 ETF(없으면 ETF 구성종목·6개월 수익률 상관) · RS = ETF Mansfield RS 정규화 · '시장은' = 주가가 실제로 같이 움직이는 ETF가 다를 때">업종 ETF</th><th>20일 주가</th><th>상태</th></tr></thead><tbody>
-      ${cands.map(o => `<tr data-c="${o.c}" style="cursor:pointer"><td>${tag(o.g)}</td><td style="text-align:left"><b>${o.n}</b> <span class="sub">${o.c}</span></td><td style="text-align:left" class="sub">${o.i || ''}</td><td>+${o.pe20[1]}bp · ${o.pe20[2]}배 · ${o.pe20[3]}/20</td><td>${o.acc ? '<b class="up">가속</b>' : '<span class="sub">감속</span>'}</td><td class="${(o.fr20 || 0) > 0 ? 'up' : 'down'}">${o.fr20 == null ? '–' : (o.fr20 > 0 ? '+' : '') + o.fr20 + '%p'}</td><td>${o.pe50 ? o.pe50[0] : 0}/20</td><td style="text-align:left;white-space:nowrap;font-size:12px">${EM[o.c] && EM[o.c][5] ? `<b>${EM[o.c][5]}</b>${EM[o.c][1] === 'DART 매출' && EM[o.c][2] ? ` <span class="sub">${EM[o.c][2]}%</span>` : ''}` : '<span class="sub">–</span>'}</td><td style="text-align:left;white-space:nowrap;font-size:12px">${EM[o.c] ? `${EM[o.c][0]} <span class="sub">RS ${EM[o.c][4] ?? '–'}${EM[o.c][6] && EM[o.c][6][0] !== EM[o.c][0] ? ` · 시장은 ${EM[o.c][6][0]}` : ''}</span>` : '<span class="sub">–</span>'}</td><td class="${o.d20 > 0 ? 'up' : 'down'}">${o.d20 ?? '–'}%</td><td>${held.has(o.c) ? '<b>보유 중</b>' : o.g === 'B' ? '<span class="sub">제외(B급)</span>' : '<span class="sub">신호 지남</span>'}</td></tr>`).join('')}</tbody></table></div>
-    <div style="padding:4px 18px 0"><b>검증 이력</b> <span class="sub">사모 신호 2024-01~2025-07 · D+1 종가 진입 · 추세 청산 · 거래당 평균</span></div>
-    <div style="overflow:auto;padding:4px 18px 6px"><table class="rmt"><thead><tr><th style="text-align:left">구분</th><th>거래당</th><th>승률</th><th>손익비</th><th>연도별</th><th>전략 반영</th></tr></thead><tbody>${bt.map(r => `<tr><td style="text-align:left">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td></tr>`).join('')}</tbody></table></div>
-    <div class="sub" style="padding:0 18px 14px;line-height:1.7">확인한 것: 사모가 팔기 시작할 때 청산하면 수익이 줄어듦(가격 추세 청산이 최선) · 연기금·3기관 합의·미국 위험신호는 도움 안 됨 · 남는 현금을 지수 IBS 50% + 추세 조건 KODEX 200 50%에 두면 +113%·MDD −16%(미적용)<br>
-      <b>보류 중</b>: 업종 소르티노 상위 1/3 비중 1.5배(+79% → +101%) — 키움 2010~ 수급 백필 후 14년치로 재검증한 뒤 결정 · 현재 검증은 1.6년치(2025 상승장 비중 큼), 상장폐지 종목 미포함</div>`;
+      청산 ${todayOut.length}건: ${todayOut.map(t => `<b>${t.name}</b> ${t['ret%']}% (${t.why})`).join(' · ') || '없음'}${(J.log || []).length ? '<br>' + J.log.join(' · ') : ''}</div>
+    <div style="padding:4px 18px 0"><b>오늘 새로 켜진 사모 신호 ${SG.length}개 — 조건 점검</b> <span class="sub">✓ 충족 · ✗ 미충족 · 모두 ✓이면 매수 · 종목을 누르면 차트</span></div>
+    <div style="overflow:auto;max-height:380px;padding:4px 18px 8px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>사모 20일</th><th>순매수일</th><th>쏠림</th>${chk.map(c => `<th>${c}</th>`).join('')}<th>등급</th><th style="text-align:left" title="DART 2025 사업보고서 매출 구성 업종">실제 사업(DART)</th><th style="text-align:left">업종 ETF</th><th>상태</th></tr></thead><tbody>
+      ${SG.map(o => `<tr data-c="${o.code}" style="cursor:pointer"><td style="text-align:left"><b>${o.name}</b> <span class="sub">${o.code}</span></td><td>+${o.n20}bp</td><td>${o.nd}/20</td><td>${o.ov ?? '–'}배</td>${chk.map(c => (o.miss || []).includes(c) ? '<td class="down">✗</td>' : '<td class="up">✓</td>').join('')}<td>${tag(o.grade)}</td><td style="text-align:left;white-space:nowrap;font-size:12px">${EM[o.code] && EM[o.code][5] ? `<b>${EM[o.code][5]}</b>` : '<span class="sub">–</span>'}</td><td style="text-align:left;white-space:nowrap;font-size:12px">${EM[o.code] ? `${EM[o.code][0]} <span class="sub">RS ${EM[o.code][4] ?? '–'}</span>` : '<span class="sub">–</span>'}</td><td>${held.has(o.code) ? '<b>보유 중</b>' : (o.miss || []).length ? '<span class="sub">미충족</span>' : '<b class="up">매수</b>'}</td></tr>`).join('') || `<tr><td colspan="${chk.length + 8}" class="empty">오늘 새로 켜진 사모 신호 없음</td></tr>`}</tbody></table></div>
+    <div style="padding:4px 18px 0"><b>검증 이력</b> <span class="sub">2017~2026 (사모펀드 시장 확대 이후) · 신호 다음 날 종가 진입 · 학습/검증 A·B·C 분할 · 재투자 시뮬레이션</span></div>
+    <div style="overflow:auto;padding:4px 18px 6px"><table class="rmt"><thead><tr><th style="text-align:left">구분</th><th>거래당 / 연복리</th><th>승률</th><th>플러스 연도</th><th style="text-align:left">비고</th></tr></thead><tbody>${bt.map(r => `<tr><td style="text-align:left">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td style="text-align:left">${r[4]}</td></tr>`).join('')}</tbody></table></div>
+    <div class="sub" style="padding:0 18px 14px;line-height:1.7">확인한 것: 사모 대량·가속 매수는 오히려 성과 낮음(이미 소문난 종목) · 추세 이탈·KOSPI 60일선 이탈로 파는 것보다 60일 보유가 나음 · 변동성 맞추기가 2026 여름 폭락을 −41% → −12%로 막음 · 실제 보유는 평균 8종목(최대 18)이라 20종목 상한·수급 스위칭은 거의 작동 안 함 · 기각: 업종 소르티노 가중, SIO, 계좌 낙폭 브레이크, 고정 비중 상한, 60일선 필터 완전 제거(2022 손실 2배)<br>
+      한계: 현재 상장 종목만(생존 편향) · 분기 무작위 검증(C)에선 +1.7%로 약함 → 기대치는 보수적으로 · IBS는 종가 근사라 실전(15시 가격)보다 낙관적일 수 있음</div>`;
   $('#pecard').onclick = e => { const t = e.target.closest('[data-c]'); if (t && typeof openStock === 'function') openStock(t.dataset.c); };
 
   // ── 이 전략이 쓰는 지표 사전 ──
   const G = [
-    ['진입', '사모 유의미 매수', '최근 20거래일 동안 ① 체급 대비 3배↑ ② 순매수 ≥ 시가총액의 0.5%(50bp) ③ 20일 중 12일↑ 순매수를 동시에 만족. 셋 다 처음 성립한 날이 신호', '키움 투자자별 매매(사모펀드) · 시총 500억↑', '사모 60일 +8.0%·120일 +10.9%(2024~26, 같은 날 평균 대비)'],
-    ['진입', '체급 대비 (배)', '(사모 그날 총매수 중 이 종목 비중) ÷ (시장 시총 중 이 종목 비중)의 20일 평균. 1배 = 시총만큼, 3배 = 시총보다 3배 크게 삼. 하루만 보면 태린이아빠 대시보드의 \'시총 대비 매수\' 순위와 같은 원리', '총매수 금액', ''],
-    ['진입', '순매수 ÷ 시가총액 (bp)', '20일 순매수(매수 − 매도) ÷ 시가총액. 1bp = 시총의 0.01%. 사고팔기를 반복한 종목을 걸러내고 실제로 쌓인 물량만 셈', '순매수 금액', ''],
-    ['진입', '순매수일', '20거래일 중 사모가 순매수한 날 수. 한 번 크게 산 것과 꾸준히 담는 것을 구분', '', ''],
-    ['필터', '거래대금 하한', '20일 평균 거래대금 10억 미만은 신규 진입하지 않음(기존 보유는 유지)', 'OHLCV', '성과 차이 미미(+84.5% vs +78.8%), 체결 위험 감소'],
-    ['필터', '이미 추세 이탈', '신호일에 이미 5<10<20<60이면 진입하지 않음', '', ''],
-    ['등급', '사모 가속', '최근 5일 사모 순매수 ≥ 20일 순매수의 40% (매수 속도가 빨라지는 중)', '', '가속 +4.8% vs 감속 −0.5% (20일 보유)'],
-    ['등급', '외국인 지분 20일 변화', '외국인 보유 비율(%)의 20거래일 전 대비 변화. 증가면 외국인도 함께 들어오는 중', '네이버 외국인 소진율', '증가 +5.3% vs 감소 −0.1% (40일)'],
-    ['등급', 'S·A·B 등급', 'S = 사모 가속 + 외국인 지분 증가 / A = 둘 중 하나 / B = 둘 다 아님. 비중 S 4% · A 1% · B 제외', '', 'S +10.4% · A +3.8% · B −1.7% (추세 청산)'],
-    ['청산', '추세 이탈 (I4)', '5일선 < 10일선 < 20일선 < 60일선 (60일선까지 역배열) — 종가 기준 판정', '', '익절·손절 8가지 중 최고(건당 +4.2%, 고정 +10%/−5%는 0%)'],
-    ['청산', '손절 −12%', '종가가 진입가 대비 −12% 이하', '', ''],
-    ['청산', '보유 60거래일', '추세가 이어져도 60거래일이 되면 청산하고 신호를 다시 기다림', '', ''],
-    ['참고', '투신 유의미 매수', '체급 3배↑ & 20일 중 12일↑ 순매수 & 순매수 > 0. 사모와 함께 새로 성립하면 \'동시 신호\'', '키움(투신)', '투신 단독 약함(+2.1%) · 동시 신호 +6.4%'],
-    ['참고', '시총 대비 매수 50등 (일수)', '그날 총매수 ÷ 시총 상위 50(스팩 제외)에 최근 20일 중 든 날 수 — 태린이아빠 대시보드 정의', '총매수 금액', '사모 8일+ 건당 +5.2%, 단독 신호로는 기존 기준이 나음'],
-    ['참고', '외국인 20일 순매수', '외국인 20일 순매수 금액 ÷ 시총', '네이버 수급', '순매수 +7.2% vs 순매도 +0.9% (이미 등급에 대부분 반영)'],
-    ['참고', '공포탐욕 (가격 F&G)', 'RSI14·125일 모멘텀·20일 이격·252일 고점 위치·변동성의 252일 백분위 합성. 0 극단 공포 ~ 100 극단 탐욕', 'KOSPI·KOSDAQ 지수', '공포 속 사모 신호 성과가 더 좋았음(KOSPI 60일선 아래 승률 51·65% vs 46·54%)'],
-    ['참고', '업종 ETF Mansfield RS', '(ETF ÷ KOSPI) ÷ 그 비율의 126일 이동평균 − 1 (%). 0~100 정규화 = 100 / (1 + e^(−RS/12)) — 태린이아빠 공식', '네이버 ETF 일별 시세', '재현 확인: KIWOOM 의료AI 30.46 / 92.68 일치'],
-    ['참고', '업종 ETF Sortino · ETR Comfort', 'Sortino = 6개월 일간수익 연환산 평균 ÷ 하방 표준편차. ETR = CAGR ÷ (|MDD| × 변동성). 10·20·50일선 위 ETF만 순위', '같음', ''],
-    ['참고', '업종 쏠림지수', '6개월 수익 순위 점수 × 6개월 수익의 표준편차 × 100. 35↑이면 소수 업종 쏠림·과열', '원본 42개 ETF', ''],
-    ['참고', '실제 사업 업종 (DART)', '2025 사업보고서 「주요 제품 및 서비스」 표의 품목·용도·매출 비중 → 키워드 규칙으로 39개 업종 배정 → 매출 비중 합이 가장 큰 업종. 제품명이 「반도체 장비」뿐이면 사업 개요로 전·후공정 구분, 금융·리츠는 회사명으로 보정', 'DART 사업보고서 원문', '기존 네이버 업종보다 세분(전공정·후공정·소재 등)'],
-    ['참고', '종목 → 업종 ETF', '① 실제 사업 업종의 ETF ② 없으면 그 ETF 구성종목(편입 비중 최대) ③ 없으면 6개월 일간수익 상관 최고(0.5↑). 주가가 실제로 같이 움직이는 ETF가 다르면 「시장은」으로 함께 표시', 'DART · ETF 구성종목 · 시세', ''],
-    ['보류', '업종 소르티노 상위 1/3', '업종 지수 6개월 수익 ÷ 하락 변동성의 업종 간 순위. 상위 1/3이면 비중 1.5배', '네이버 업종 시총가중 지수', '+79% → +101% (14년 재검증 후 결정)'],
+    ['진입', '사모 신호', '사모 20일 순매수 ≥ 시가총액의 0.1%(10bp) 그리고 20일 중 8일↑ 순매수 상태가 새로 켜진 날', '키움 투자자별 매매(사모펀드) · 시총 500억↑ · 거래대금 10억↑', '넓게 잡고 아래 조건으로 거름'],
+    ['진입', '매수 쏠림 (배)', '(사모 20일 총매수 중 이 종목 비중) ÷ (시장 시총 중 이 종목 비중). 5배↑ = 몸집보다 5배 크게 삼', '총매수 금액', '세 분할 모두 상위 규칙에 포함'],
+    ['진입', '외국인 20일 순매수', '외국인 20일 순매수 금액 > 0', '키움 수급', '외국인 지분율 증가보다 순매수가 나음(2017~)'],
+    ['진입', '투신 20일 순매수', '투신 20일 순매수 금액 > 0 (사모와 함께 국내 기관이 삼)', '키움(투신)', ''],
+    ['진입', '정배열', '5일선 > 10일선 > 20일선 > 60일선 (이미 오르는 종목)', 'OHLCV', '약한 종목 줍기보다 추세 종목'],
+    ['진입', '시총 3천억↑', '신호일 시가총액 3,000억 이상', '', '3천억↑ +9.3% vs 미만 +3.7%'],
+    ['필터', 'KOSPI 60일선 또는 120일선 위 (⑥안)', '둘 중 하나라도 위면 신규 매수. 둘 다 아래(하락장)면 사모 엔진은 쉼', 'KOSPI', '얕은 조정 허용으로 연복리 20.4→22.2%, 2022 손실은 그대로(−10.3%)'],
+    ['등급', 'S급 (평가액 10%)', '52주 고점 대비 −10% 이내 (신고가 근처). 나머지는 A급 4%', '', 'S +11.2% vs A +3.5% (60일)'],
+    ['청산', '60거래일 보유', '진입 후 60거래일째 종가 청산. 보유 중 같은 종목 신호가 다시 켜지면 그날부터 60일 연장', '', '추세 이탈·고정 익절손절·시장 이탈 매도보다 나음'],
+    ['비중', 'S8 변동성 맞추기', '목표 주식 비중 = 15% ÷ KOSPI 20일 변동성(연환산), 30~100%. 넘으면 그날 종가에 전 종목 같은 비율로 줄임', 'KOSPI', 'MDD −41.5→−28.2%, 2026 여름 −41→−12%'],
+    ['비중', 'S8 고요한 상승 추세 상한', 'KOSPI 상승 추세(40일 +3%↑ & 20일선>60일선)인데 변동성 1년 분위 ≤ 0.2면 비중 상한 70%', '', '천장은 조용함 → MDD −28.2→−24.3%'],
+    ['하락장', '지수 레버리지 IBS', 'KOSPI 60·120일선 모두 아래인 날, KODEX 레버리지·코스닥150레버리지의 IBS=(종가−저가)/(고가−저가) < 0.25 & ATR(14) 252일 상위 30% → 종가에 현금 50% 매수 → 다음 날 종가 매도(시가 −3% 손절)', 'ETF 일봉', '하락장 구간 +94% (KOSPI −6%) · 통합 연복리 22.2→28.4%'],
+    ['참고', '수급 오실레이터 P', '(외국인+기관 5일 순매수 ÷ 시총)의 MACD(12,26,9) 히스토그램이 최근 60개 중 몇 번째인지. ≤25 비어 있음, ≥75 채워짐 (태린이아빠 공식)', '키움 수급', '신호일 P≤25 +13.2% vs P≥75 +10.3% (S급에서 효과, A급은 없음)'],
+    ['참고', '실제 사업 업종 (DART)', '2025 사업보고서 「주요 제품 및 서비스」 매출 비중으로 정한 업종(39개)', 'DART 사업보고서', ''],
+    ['참고', '업종 ETF Mansfield RS', '(ETF ÷ KOSPI) ÷ 그 비율의 126일 이동평균 − 1. 0~100 정규화 — 태린이아빠 공식', '네이버 ETF 시세', ''],
   ];
-  const ccol = {진입: '#e0343a', 필터: '#c98500', 등급: '#4f46e5', 청산: '#1b9e6c', 참고: '#9aa0aa', 보류: '#2f6fe0'};
+  const ccol = {진입: '#e0343a', 필터: '#c98500', 등급: '#4f46e5', 청산: '#1b9e6c', 비중: '#2f6fe0', 하락장: '#0b8a8a', 참고: '#9aa0aa', 보류: '#2f6fe0'};
   $('#peglos').style.display = '';
-  $('#peglos').innerHTML = `<div class="sec-h"><span class="dot"></span>이 전략이 쓰는 지표 <span class="sub">진입·필터·등급·청산은 실제 매매 규칙, 참고·보류는 판단 보조(매매 규칙 아님)</span></div>
+  $('#peglos').innerHTML = `<div class="sec-h"><span class="dot"></span>이 전략이 쓰는 지표 <span class="sub">진입·필터·등급·청산·비중·하락장은 실제 매매 규칙, 참고는 판단 보조(매매 규칙 아님)</span></div>
     <div style="overflow:auto;padding:4px 18px 16px"><table class="rmt"><thead><tr><th>역할</th><th style="text-align:left">지표</th><th style="text-align:left">정의</th><th style="text-align:left">데이터</th><th style="text-align:left">검증 결과</th></tr></thead><tbody>
     ${G.map(r => `<tr><td><span class="tg" style="color:${ccol[r[0]]};border-color:${ccol[r[0]]}">${r[0]}</span></td><td style="text-align:left;white-space:nowrap"><b>${r[1]}</b></td><td style="text-align:left;line-height:1.6">${r[2]}</td><td style="text-align:left" class="sub">${r[3]}</td><td style="text-align:left" class="sub">${r[4]}</td></tr>`).join('')}</tbody></table></div>`;
 }
