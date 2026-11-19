@@ -18,7 +18,7 @@ svg text{font-family:inherit}table{border-collapse:collapse;width:100%;font-size
 <nav><a href="index.html">국내 다이버전스</a><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="us_div.html">미국 다이버전스</a><a href="pe_flow.html">사모투신 수급전략</a><a href="market_trend.html" class="on">시장 추세</a></nav>
 <h1>KOSPI 시장 추세</h1><div class="sub" id="hd"></div>
 <div class="card"><div class="kpis" id="now"></div><div class="sub" id="recent" style="margin-top:10px;line-height:1.8"></div></div>
-<div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><div class="seg" id="rng"></div><div class="sub">배경색 = 추세 상태 · 범례를 눌러 표시 켜기/끄기(기본: 검증✓ 신호 + 추세 전환) · 기호에 마우스를 올리면 근거</div></div>
+<div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><div class="seg" id="rng"></div><div class="sub">마우스 휠 = 확대·축소 · 끌기 = 이동 · 두 번 클릭 = 1년 · 배경색 = 추세 상태 · 범례를 눌러 표시 켜기/끄기 · 기호에 마우스를 올리면 근거</div></div>
 <div class="lg" id="legend"></div><div id="chart"></div>
 <div class="sub" style="margin-top:4px">아래: <b style="color:#db2777">Crowding Index</b>(CTA 포지션 쏠림, −1~+1) · <b style="color:#7c3aed">Internal Divergence</b>(장·단기 신호 균열, 0~2) — 하나증권 Global Quant(2026-04-30) 공식</div><div id="sub"></div></div>
 <div class="card"><b>신호별 과거 성과 (KOSPI 2010~2026)</b> <span class="sub">신호 다음 5·20·60거래일 KOSPI 수익 평균과 기대 방향 적중률 · 표시는 그날 종가까지 정보로만 판정</span>
@@ -44,7 +44,7 @@ const EVS = {'추세 전환(→상승)': ['▲', '#e0343a', 'up'], '추세 전�
   'CTA 쏠림 급락(고점 근처)': ['◆', '#db2777', 'top'], '단기 눌림 예상': ['↘', '#c2410c', 'low'], '단기 반등 예상': ['↗', '#16a34a', 'low']};
 const fd = d => `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}`, won = v => Math.round(v).toLocaleString('ko-KR');
 const VERIFIED = new Set(['추세 훼손(40일선)', '단기 반등 예상', 'CTA 쏠림 급락(고점 근처)']);
-let RANGE = 250, SHOW = new Set(['추세 훼손(40일선)', '단기 반등 예상', 'CTA 쏠림 급락(고점 근처)', '추세 전환(→상승)', '추세 전환(→하락)']);
+let RANGE = 250, VA = null, VB = null, GEO = {L: 52, R: 12, W: 800}, SHOW = new Set(['추세 훼손(40일선)', '단기 반등 예상', 'CTA 쏠림 급락(고점 근처)', '추세 전환(→상승)', '추세 전환(→하락)']);
 const N = J.now;
 document.getElementById('hd').textContent = `기준 ${fd(J.date)} 종가 · 매일 18:30 정기 갱신`;
 document.getElementById('now').innerHTML = `
@@ -55,14 +55,18 @@ document.getElementById('now').innerHTML = `
   <div class="kpi"><div class="sub">바닥 신호 (최근 20일)</div><b>${N.bottom_score}개</b><div class="sub">${N.bottom_on.join(' · ') || '없음'}</div></div>`;
 document.getElementById('recent').innerHTML = '<b style="color:var(--fg)">최근 60거래일 신호</b>: ' + (N.recent.slice().sort((a, b) => a.d < b.d ? 1 : -1).map(e => `<span style="color:${EVS[e.t][1]}">${EVS[e.t][0]}</span> ${fd(e.d)} ${e.t}${e.why ? ' (' + e.why + ')' : ''}`).join(' · ') || '없음');
 document.getElementById('rng').innerHTML = [[120, '6개월'], [250, '1년'], [750, '3년'], [99999, '전체']].map(([n, t]) => `<button data-n="${n}" class="${n === RANGE ? 'on' : ''}">${t}</button>`).join('');
-document.getElementById('rng').onclick = e => { const b = e.target.closest('button'); if (b) { RANGE = +b.dataset.n; draw(); document.querySelectorAll('#rng button').forEach(x => x.classList.toggle('on', +x.dataset.n === RANGE)); } };
+const setRange = r => { RANGE = r; const n = J.dates.length; VB = n - 1; VA = Math.max(0, n - r); document.querySelectorAll('#rng button').forEach(x => x.classList.toggle('on', +x.dataset.n === RANGE)); draw(); };
+document.getElementById('rng').onclick = e => { const b = e.target.closest('button'); if (b) setRange(+b.dataset.n); };
 document.getElementById('legend').innerHTML = Object.entries(EVS).map(([k, [s, c]]) => `<span data-k="${k}" style="cursor:pointer;opacity:${SHOW.has(k) ? 1 : .35}"><b style="color:${c}">${s}</b>${k}${VERIFIED.has(k) ? ' <b style="color:#16a34a;font-size:10px">검증✓</b>' : ''}</span>`).join('') +
   '<span><i style="display:inline-block;width:14px;height:10px;background:var(--upbg);border:1px solid var(--line)"></i>상승 추세</span><span><i style="display:inline-block;width:14px;height:10px;background:var(--dnbg);border:1px solid var(--line)"></i>하락 추세</span>';
 document.getElementById('legend').onclick = e => { const s = e.target.closest('span[data-k]'); if (!s) return; const k = s.dataset.k; SHOW.has(k) ? SHOW.delete(k) : SHOW.add(k); s.style.opacity = SHOW.has(k) ? 1 : .35; draw(); };
 const tip = document.getElementById('tip');
 function draw() {
-  const n = J.dates.length, a = Math.max(0, n - RANGE), D = J.dates.slice(a), C = J.close.slice(a), M20 = J.ma20.slice(a), M60 = J.ma60.slice(a), M120 = J.ma120.slice(a), S = J.state.slice(a);
+  const n = J.dates.length;
+  if (VA === null) { VB = n - 1; VA = Math.max(0, n - RANGE); }
+  const a = VA, b = VB + 1, D = J.dates.slice(a, b), C = J.close.slice(a, b), M20 = J.ma20.slice(a, b), M60 = J.ma60.slice(a, b), M120 = J.ma120.slice(a, b), S = J.state.slice(a, b);
   const W = Math.max(document.getElementById('chart').clientWidth, 320), H = 440, L = 52, R = 12, T = 12, B = 26;
+  GEO = {L, R, W};
   const vals = C.concat(M60.filter(x => x != null), M120.filter(x => x != null)).filter(x => x != null);
   let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * .06; lo -= pad; hi += pad;
   const X = i => L + (W - L - R) * i / Math.max(D.length - 1, 1), Y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
@@ -88,7 +92,7 @@ function draw() {
     tip.style.display = 'block'; tip.style.left = ev.clientX + 12 + 'px'; tip.style.top = ev.clientY + 12 + 'px'; tip.textContent = `${fd(D[i])} KOSPI ${won(C[i])} · ${ST[S[i]][0]}`; };
   hov.onmouseleave = () => tip.style.display = 'none';
   // 보조 차트
-  const CR = J.crowd.slice(a), ID = J.idv.slice(a), H2 = 130, Y2 = v => 8 + (H2 - 26) * (1 - (v + 1) / 3);
+  const CR = J.crowd.slice(a, b), ID = J.idv.slice(a, b), H2 = 130, Y2 = v => 8 + (H2 - 26) * (1 - (v + 1) / 3);
   let s2 = `<svg viewBox="0 0 ${W} ${H2}" width="100%" height="${H2}">`;
   [-1, 0, 1, 2].forEach(v => { s2 += `<line x1="${L}" x2="${W - R}" y1="${Y2(v)}" y2="${Y2(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${Y2(v) + 4}" font-size="10" text-anchor="end" fill="var(--sub)">${v}</text>`; });
   const pl2 = (arr, col) => { let q = ''; arr.forEach((v, i) => { if (v != null) q += `${X(i).toFixed(1)},${Y2(v).toFixed(1)} `; }); return `<polyline points="${q}" fill="none" stroke="${col}" stroke-width="1.4"/>`; };
@@ -99,5 +103,28 @@ const tb = (rows, cols) => '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '<
 document.getElementById('perf').innerHTML = tb(J.perf, ['신호', '횟수', '5일 뒤%', '5일 방향 적중%', '20일 뒤%', '20일 방향 적중%', '60일 뒤%', '60일 방향 적중%']);
 document.getElementById('short').innerHTML = tb(J.short_stats, ['구분', '조건', '일수', '5일 뒤%', '평소%', '방향 적중%', 'A', 'B', 'C', '채택']);
 document.getElementById('note').innerHTML = '읽는 법: KOSPI는 장기적으로 올라 아무 날이나 20일 뒤 상승 확률이 약 55%입니다. 추세·천장·바닥 표시는 <b>지금 시장이 어떤 상태인지 설명</b>하는 용도이며, 단독 예측력은 약합니다(위 적중률). <b>검증✓</b> 표시만 세 구간(2010-19·2020-26·무작위) 모두에서 일관됐습니다: <b>추세 훼손(40일선)</b> = 상승 추세 중 40일선 −3% 또는 이틀 연속 아래(10일 뒤 −0.69% vs 평소 +0.30%), <b>단기 반등 예상</b> = 하락 추세 RSI(2)≤5·5일 −5% + 볼린저 하단 반등 + VIX 30 돌파. 60일선 터치 반등·블로그 8지표 점수·과열 매도 신호는 지수에서 검증되지 않았습니다(docs/RESEARCH_ma_support.md). 상승 추세 중 <b>단기 눌림 예상</b>은 채택 조건이 없습니다 — 상승 추세의 단기 과열은 눌림보다 추가 상승이 많았습니다(추세 지속).';
+// ── 확대·축소·이동: 마우스 휠 = 커서 기준 확대/축소 · 끌기 = 좌우 이동 · 두 번 클릭 = 1년으로 · 터치 두 손가락 = 확대/축소 ──
+(function () {
+  const el = document.getElementById('chart'), n = J.dates.length, MIN = 20;
+  const frac = cx => { const r = el.getBoundingClientRect(), sx = r.width / GEO.W; return Math.min(1, Math.max(0, (cx - r.left - GEO.L * sx) / ((GEO.W - GEO.L - GEO.R) * sx))); };
+  const plotPx = () => { const r = el.getBoundingClientRect(); return (GEO.W - GEO.L - GEO.R) * r.width / GEO.W; };
+  const clear = () => document.querySelectorAll('#rng button').forEach(x => x.classList.remove('on'));
+  const zoom = (f, k) => { const span = VB - VA, ns = Math.round(Math.min(n - 1, Math.max(MIN, span * k))), c = VA + f * span; let a = Math.round(c - f * ns); a = Math.max(0, Math.min(n - 1 - ns, a)); VA = a; VB = a + ns; clear(); draw(); };
+  const pan = di => { const span = VB - VA; let a = Math.round(VA + di); a = Math.max(0, Math.min(n - 1 - span, a)); if (a !== VA) { VA = a; VB = a + span; clear(); draw(); } };
+  el.addEventListener('wheel', e => { e.preventDefault(); zoom(frac(e.clientX), e.deltaY > 0 ? 1.18 : 1 / 1.18); }, {passive: false});
+  let drag = null;
+  el.addEventListener('mousedown', e => { drag = {x: e.clientX, a: VA}; el.style.cursor = 'grabbing'; });
+  window.addEventListener('mousemove', e => { if (!drag) return; const span = VB - VA, di = -(e.clientX - drag.x) / plotPx() * span; const target = drag.a + di; pan(target - VA); });
+  window.addEventListener('mouseup', () => { drag = null; el.style.cursor = 'grab'; });
+  el.addEventListener('dblclick', () => setRange(250));
+  el.style.cursor = 'grab';
+  const pts = new Map(); let pinch = null;
+  el.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') return; pts.set(e.pointerId, e.clientX); if (pts.size === 2) { const xs = [...pts.values()]; pinch = {d: Math.abs(xs[0] - xs[1]), a: VA, b: VB, f: frac((xs[0] + xs[1]) / 2)}; } else if (pts.size === 1) drag = {x: e.clientX, a: VA}; });
+  el.addEventListener('pointermove', e => { if (e.pointerType !== 'touch' || !pts.has(e.pointerId)) return; pts.set(e.pointerId, e.clientX);
+    if (pinch && pts.size === 2) { const xs = [...pts.values()], d = Math.abs(xs[0] - xs[1]); if (d > 10) { VA = pinch.a; VB = pinch.b; zoom(pinch.f, pinch.d / d); } } });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) drag = null; };
+  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  el.style.touchAction = 'pan-y';
+})();
 draw(); window.addEventListener('resize', draw);
 </script></body></html>
