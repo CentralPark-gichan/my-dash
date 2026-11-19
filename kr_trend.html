@@ -721,7 +721,7 @@ async function initPeFlow() {
     <div class="kpis">
       <div class="kpi"><div class="sub">평가액</div><b style="font-size:22px" class="${ret >= 0 ? 'up' : 'down'}">${won(L.equity)}원</b><div class="sub">${ret >= 0 ? '+' : ''}${ret.toFixed(2)}% (${ret >= 0 ? '+' : ''}${won(L.equity - J.cap0)}원)</div></div>
       <div class="kpi"><div class="sub">보유</div><b style="font-size:22px">${P.length}종목</b><div class="sub">S급 ${P.filter(p => p.grade === 'S').length} · A급 ${P.filter(p => p.grade === 'A').length} · 투입 ${won(inv)}원 (${(inv / L.equity * 100).toFixed(0)}%)</div></div>
-      <div class="kpi"><div class="sub">현금</div><b style="font-size:22px">${won(J.cash)}원</b><div class="sub">신호마다 평가액의 S 10%·A 4% · 목표 비중 ${J.market ? Math.round(J.market.target * 100) + '%' : '–'}(S8)${(J.ibs_pos || []).length ? ' · 하락장 엔진 보유 ' + J.ibs_pos.map(q => q.name).join(', ') : ''}</div></div>
+      <div class="kpi"><div class="sub">현금</div><b style="font-size:22px">${won(J.cash)}원</b><div class="sub">신호마다 평가액의 S 10%·A 4% · 목표 비중 ${J.market ? Math.round(J.market.target * 100) + '%' : '–'}(S8)${(J.ibs_pos || []).length ? ' · 하락장 엔진 보유 ' + J.ibs_pos.map(q => q.name).join(', ') : ''} · KOSPI 채우기 ${J.fill && J.fill.sh ? 'KODEX 200 ' + J.fill.sh + '주' : '없음'}</div></div>
       <div class="kpi"><div class="sub">청산 실적</div><b style="font-size:22px">${(J.trades || []).length}건</b><div class="sub">${(J.trades || []).length ? `승률 ${Math.round(wins / J.trades.length * 100)}% · 실현 ${won(J.trades.reduce((s, t) => s + t.pnl, 0))}원` : '아직 청산 없음'} · 백테스트 승률 약 53%(60일 보유)</div></div>
       ${spark ? `<div class="kpi"><div class="sub">평가액 추이</div>${spark}</div>` : ''}
     </div>
@@ -754,7 +754,8 @@ async function initPeStrategy() {
     ['└ 신호일 수급 오실레이터 P≤25 (비어 있음)', '+13.2%', '57%', '—', '세 기간 모두 중간 P보다 높음 (참고)'],
     ['KOSPI 60·120일선 모두 아래에서 사모 신호', '+2.5%', '44%', '—', '중앙값 −2.8% → 하락장엔 사모 엔진 쉼'],
     ['포트: 사모 ⑥안 단독 (재투자·S8)', '연복리 22.2%', '—', '—', 'MDD −24.9% · 2022 −10.3%'],
-    ['포트: ⑥안 + 하락장 IBS (현금 50%)', '<b class="up">연복리 28.4%</b>', '—', '—', 'MDD −23.3% · 하락장 구간 +94% (KOSPI −6%)'],
+    ['포트: ⑥안 + 하락장 IBS (현금 50%)', '연복리 28.4%', '—', '—', 'MDD −23.3% · 하락장 구간 +94% (KOSPI −6%)'],
+    ['포트: 현행 + 남는 현금 KOSPI 채우기 (S8 목표까지)', '<b class="up">연복리 31.8%</b>', '—', '—', 'MDD −26.3% · 주식비중 50→65% · 신호 넓히기는 전부 역효과'],
     ['비교: KOSPI', '연복리 9.7%', '—', '—', 'MDD −45.5%'],
     ['옛 규칙 (50bp·12일·체급 3배·추세 청산)', '+0.7%', '31%', '57%', '14년 재검증 후 폐기']];
   $('#pecard').style.display = '';
@@ -764,7 +765,7 @@ async function initPeStrategy() {
       ② <b>하락장</b>(KOSPI 60·120일선 모두 아래) — 사모 엔진은 쉬고, 남는 현금 절반으로 지수 레버리지의 <b>장 막판 투매(IBS)</b>를 하루씩 받아낸다.</div>
     <div class="kpis">
       <div class="kpi"><div class="sub">사모 엔진 진입 (모두 충족, 그날 종가)</div><b style="font-size:14px">사모 20일 ≥ 시총 10bp · 8/20일 새로 켜짐</b><div class="sub">+ 쏠림 5배↑ · 외국인·투신 20일 순매수 · KOSPI 60일선 또는 120일선 위 · 정배열 · 시총 3천억↑</div></div>
-      <div class="kpi"><div class="sub">금액 · 청산</div><b style="font-size:15px">S 10%(수급 비면 15%) · A 4% · 60일 보유</b><div class="sub">평가액 기준 재투자 · S = 52주 고점 −10% 이내 · 재신호 시 60일 연장 · 최대 20종목</div></div>
+      <div class="kpi"><div class="sub">금액 · 청산</div><b style="font-size:15px">S 10%(수급 비면 15%) · A 4% · 60일 보유</b><div class="sub">평가액 기준 재투자 · S = 52주 고점 −10% 이내 · 재신호 시 60일 연장 · 최대 20종목 · 남는 현금은 S8 목표까지 KODEX 200(시장 필터 통과 시, 5%p 밴드)</div></div>
       <div class="kpi"><div class="sub">비중 조절 S8 (오늘)</div><b style="font-size:15px">목표 ${MK.target != null ? Math.round(MK.target * 100) + '%' : '–'}</b><div class="sub">15% ÷ KOSPI 20일 변동성(${MK.rv20 != null ? (MK.rv20 * 100).toFixed(0) + '%' : '–'}) · 30~100% · 고요한 상승 추세면 70% 상한${MK.calm ? ' (적용 중)' : ''}</div></div>
       <div class="kpi"><div class="sub">시장 국면 (오늘)</div><b style="font-size:15px" class="${MK.mkt_ok ? 'up' : 'down'}">${MK.mkt_ok ? '사모 엔진 가동' : '하락장 → 사모 엔진 쉼, IBS 엔진 대기'}</b><div class="sub">KOSPI 60일선 ${MK.above60 ? '위' : '아래'} · 120일선 ${MK.above120 ? '위' : '아래'}</div></div>
       <div class="kpi"><div class="sub">하락장 IBS 엔진 (오늘)</div><b style="font-size:14px">${MK.bear ? (IB.some(x => x.signal) ? '매수 신호' : '신호 없음') : '쉼(하락장 아님)'}</b><div class="sub">${IB.map(x => `${x.name} IBS ${x.ibs} · ATR 분위 ${x.atr_pct}${x.signal ? ' ✓' : ''}`).join('<br>') || '–'}<br>매수: IBS&lt;0.25 & ATR 상위 30% → 현금 50% · 다음 날 종가 매도(시가 −3% 손절)</div></div>
@@ -795,6 +796,7 @@ async function initPeStrategy() {
     ['청산', '60거래일 보유', '진입 후 60거래일째 종가 청산. 보유 중 같은 종목 신호가 다시 켜지면 그날부터 60일 연장', '', '추세 이탈·고정 익절손절·시장 이탈 매도보다 나음'],
     ['비중', 'S8 변동성 맞추기', '목표 주식 비중 = 15% ÷ KOSPI 20일 변동성(연환산), 30~100%. 넘으면 그날 종가에 전 종목 같은 비율로 줄임', 'KOSPI', 'MDD −41.5→−28.2%, 2026 여름 −41→−12%'],
     ['비중', 'S8 고요한 상승 추세 상한', 'KOSPI 상승 추세(40일 +3%↑ & 20일선>60일선)인데 변동성 1년 분위 ≤ 0.2면 비중 상한 70%', '', '천장은 조용함 → MDD −28.2→−24.3%'],
+    ['비중', 'KOSPI 채우기 (KODEX 200)', '시장 필터(KOSPI 60일선 또는 120일선 위) 통과 시, S8 목표 비중 − 개별주 비중만큼 KODEX 200 보유. 목표와 차이가 평가액 5%p 이내면 매매 안 함', 'ETF 시세', '연복리 24.0→31.8%, MDD 동일(−26%), 두 시대 모두 개선'],
     ['하락장', '지수 레버리지 IBS', 'KOSPI 60·120일선 모두 아래인 날, KODEX 레버리지·코스닥150레버리지의 IBS=(종가−저가)/(고가−저가) < 0.25 & ATR(14) 252일 상위 30% → 종가에 현금 50% 매수 → 다음 날 종가 매도(시가 −3% 손절)', 'ETF 일봉', '하락장 구간 +94% (KOSPI −6%) · 통합 연복리 22.2→28.4%'],
     ['참고', '수급 오실레이터 P', '(외국인+기관 5일 순매수 ÷ 시총)의 MACD(12,26,9) 히스토그램이 최근 60개 중 몇 번째인지. ≤25 비어 있음, ≥75 채워짐 (태린이아빠 공식) — S급 비중 15% 판정에 사용', '키움 수급', '신호일 P≤25 +13.2% vs P≥75 +10.3% (S급에서 효과, A급은 없음)'],
     ['참고', '실제 사업 업종 (DART)', '2025 사업보고서 「주요 제품 및 서비스」 매출 비중으로 정한 업종(39개)', 'DART 사업보고서', ''],
