@@ -650,7 +650,7 @@ async function initRegime() {
 }
 setTimeout(initRegime);
 // ── 사모·투신 유의미 매수 — 1개월(20일)·1주(5일)·당일 (research/inst_top50.py → inst_flow_table.json) ──
-let IFT = null, ifSort = 'both20', ifOnly = true, ifQ = '';
+let IFT = null, ifSort = 'both20', ifOnly = true, ifQ = '', ifOld = false;
 async function initInstTable() {
   if (META.market !== 'KR') return;
   try { IFT = await (await fetch(`${META.charts}/inst_flow_table.json`)).json(); } catch (e) { return; }
@@ -664,18 +664,21 @@ function renderInstTable() {
   let L = Object.entries(J.rows).map(([c, r]) => ({c, ...r}));
   if (ifQ) L = L.filter(r => (r.n || '').includes(ifQ) || (r.i || '').includes(ifQ) || r.c.includes(ifQ));
   if (ifOnly) L = L.filter(r => ifSort === 'p50' ? (r.pe50 || [0])[0] >= 8 : ifSort === 't50' ? (r.tr50 || [0])[0] >= 8 : ifSort === 'star' ? r.star : ifSort === 'both20' ? (r.pe20s || r.tr20s) : r[ifSort + 's']);
+  if (ifOld) L = L.filter(r => r.pe_age == null || r.pe_age <= 30);
   L = L.sort((a, b) => sk(b) - sk(a)).slice(0, 50);
+  const onCell = r => r.pe_on == null ? '<td class="sub">–</td>' : `<td style="white-space:nowrap" title="사모 20일 순매수 ≥ 시총 10bp & 순매수일 ≥ 8/20(사모투신 전략 정의)이 연속으로 켜지기 시작한 날 · 키움 종목별 데이터 기준이라 전략(KRX 순위 파일)과 하루이틀 다를 수 있음"><b style="color:${r.pe_age <= 5 ? '#e0343a' : r.pe_age > 30 ? 'var(--sub)' : 'inherit'}">${r.pe_on.slice(4, 6)}/${r.pe_on.slice(6, 8)}</b><div class="sub">${r.pe_age === 0 ? '오늘 켜짐' : r.pe_age + '일째'}</div></td>`;
   const cell = (r, k, w) => { const v = r[k + w]; if (!v) return '<td class="sub">–</td>'; const s = r[k + w + 's'];
     return `<td style="${s ? 'background:rgba(224,52,58,.09)' : ''}" title="순매수 ${v[0]}억 · 시총 대비 ${v[1]}bp · 체급 대비 ${v[2]}배 · 순매수 ${v[3]}/${w}일"><b class="${v[1] > 0 ? 'up' : v[1] < 0 ? 'down' : ''}">${v[1] > 0 ? '+' : ''}${v[1]}bp</b><div class="sub">${v[2]}배 · ${v[3]}/${w}일${s ? ' · <b style="color:#e0343a">유의미</b>' : ''}</div></td>`; };
   const hd = K.map(([k, n]) => W.map(([w, t]) => `<th data-s="${k}${w}" style="cursor:pointer;${ifSort === k + w ? 'color:var(--ink);text-decoration:underline' : ''}">${n} ${t}</th>`).join('')).join('');
   const fd = d => `${d.slice(4, 6)}/${d.slice(6, 8)}`;
   $('#ifcard').innerHTML = `<div class="sec-h"><span class="dot"></span>사모·투신 유의미 매수 — 1개월 · 1주 · 당일 <span class="sub">${fd(J.from20)}~${fd(J.date)} · 칸 = 시총 대비 순매수(bp, 1bp = 시총 0.01%) · 체급 대비(그날 총매수 중 이 종목 비중 ÷ 시총 비중) · 순매수 일수 · 키움 투자자별 매매 · <b>종목을 누르면 차트 화면으로</b></span></div>
     <div class="filters" style="padding:8px 18px 0"><div class="seg" id="ifsort">${[['star', '★ 사모+가속+외인↑'], ['p50', '사모 50등 반복'], ['t50', '투신 50등 반복'], ['pe20', '사모 1개월'], ['tr20', '투신 1개월'], ['both20', '사모+투신 1개월'], ['pe5', '사모 1주'], ['tr5', '투신 1주'], ['pe1', '사모 당일'], ['tr1', '투신 당일']].map(([k, t]) => `<button data-s="${k}" class="${ifSort === k ? 'on' : ''}">${t}</button>`).join('')}</div>
-    <label><input type="checkbox" id="ifonly" ${ifOnly ? 'checked' : ''}> 유의미만</label><label>검색 <input type="text" id="ifq" value="${ifQ}" placeholder="종목·업종"></label><span class="sub">${L.length}종목</span></div>
+    <label><input type="checkbox" id="ifonly" ${ifOnly ? 'checked' : ''}> 유의미만</label><label title="사모 신호가 켜진 지 30거래일 넘은 종목 숨기기 — 검증(docs/RESEARCH_pe_age.md): 2010~19는 30일+ 적중률이 약간 낮았고(45% vs 49%) 2020~는 오히려 높았음(48% vs 43%)"><input type="checkbox" id="ifold" ${ifOld ? 'checked' : ''}> 사모 신호 30일 넘은 종목 숨기기</label><label>검색 <input type="text" id="ifq" value="${ifQ}" placeholder="종목·업종"></label><span class="sub">${L.length}종목</span></div>
     ${(J.notes || []).length ? `<div style="margin:8px 18px 4px;padding:10px 14px;border-left:3px solid #e0343a;background:rgba(224,52,58,.05);border-radius:8px;line-height:1.75;font-size:13px"><b>눈에 띄는 점</b> <span class="sub">매일 자동 요약</span><ul style="margin:4px 0 0 18px;padding:0">${J.notes.map(x => `<li>${x}</li>`).join('')}</ul></div>` : ''}
     <div class="sub" style="padding:4px 18px 6px;line-height:1.6">유의미 기준 — <b>1개월(검증)</b>: 사모 = 체급 3배↑ & 시총 50bp↑ & 순매수 12일↑ (60일 +8.0%·120일 +10.9%, 2024~26) / 투신 = 체급 3배↑ & 12일↑ (+3.1%) · <b>1주</b>: 3배↑ & 15bp↑ & 4일↑ · <b>당일</b>: 3배↑ & 5bp↑ — 1주·당일은 미검증(초기 포착용). 기타법인은 자사주 매입일 수 있어 제외.</div>
-    <div style="overflow:auto;max-height:560px;padding:0 18px 16px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>시총</th>${hd}<th title="시가총액 대비 매수 50등(그날 총매수 ÷ 시총, 스팩 제외) 등장 일수 — 20일 중 / 최근 5일 중 · 사모 20일 중 8일+ = 백테스트 건당 +5.2%">50등 일수<div class="sub">사모 · 투신</div></th><th title="사모 가속 = 최근 5일 순매수가 20일의 40% 이상 · 외인 = 외국인 지분율 20일 변화(%p) · ★ = 사모 유의미+가속+외인 증가 (백테스트 40일 평균 +8.2% vs 기준 +2.7%)">가속·외인</th><th>오늘</th><th>20일</th></tr></thead><tbody>
-    ${L.map(r => `<tr data-c="${r.c}" style="cursor:pointer" title="눌러서 차트·종목 상세 보기"><td style="text-align:left"><b style="text-decoration:underline dotted">${r.n}</b> <span class="sub">${r.c} · ${r.i || ''} · 차트 ›</span></td><td>${r.cap}조</td>${K.map(([k]) => W.map(([w]) => cell(r, k, w)).join('')).join('')}<td style="white-space:nowrap"><b style="color:${(r.pe50 || [0])[0] >= 8 ? '#e0343a' : 'inherit'}">${r.pe50 ? r.pe50[0] + '/20' : '–'}</b> <span class="sub">(5일 ${r.pe50 ? r.pe50[1] : 0})</span><div class="sub">투신 ${r.tr50 ? r.tr50[0] + '/20' : '–'}</div></td><td style="white-space:nowrap">${r.star ? '<b style="color:#e0343a">★</b> ' : ''}${r.acc ? '<span class="tg" style="color:#e0343a;border-color:#e0343a">사모 가속</span>' : (r.pe20 && r.pe20[0] > 0 ? '<span class="sub">감속</span>' : '')}<div class="sub ${r.fr20 > 0 ? 'up' : r.fr20 < 0 ? 'down' : ''}">외인 ${r.fr20 == null ? '–' : (r.fr20 > 0 ? '+' : '') + r.fr20 + '%p'}</div></td><td class="${r.d1 > 0 ? 'up' : r.d1 < 0 ? 'down' : ''}">${r.d1 ?? '–'}%</td><td class="${r.d20 > 0 ? 'up' : r.d20 < 0 ? 'down' : ''}">${r.d20 ?? '–'}%</td></tr>`).join('') || '<tr><td colspan="12" class="empty">조건에 맞는 종목 없음</td></tr>'}</tbody></table></div>`;
+    <div style="overflow:auto;max-height:560px;padding:0 18px 16px"><table class="rmt"><thead><tr><th style="text-align:left">종목</th><th>시총</th>${hd}<th title="사모 신호(20일 순매수 ≥ 시총 10bp & 순매수일 ≥ 8/20)가 이번에 처음 켜진 날 · 경과 거래일">사모 신호<div class="sub">켜진 날</div></th><th title="시가총액 대비 매수 50등(그날 총매수 ÷ 시총, 스팩 제외) 등장 일수 — 20일 중 / 최근 5일 중 · 사모 20일 중 8일+ = 백테스트 건당 +5.2%">50등 일수<div class="sub">사모 · 투신</div></th><th title="사모 가속 = 최근 5일 순매수가 20일의 40% 이상 · 외인 = 외국인 지분율 20일 변화(%p) · ★ = 사모 유의미+가속+외인 증가 (백테스트 40일 평균 +8.2% vs 기준 +2.7%)">가속·외인</th><th>오늘</th><th>20일</th></tr></thead><tbody>
+    ${L.map(r => `<tr data-c="${r.c}" style="cursor:pointer" title="눌러서 차트·종목 상세 보기"><td style="text-align:left"><b style="text-decoration:underline dotted">${r.n}</b> <span class="sub">${r.c} · ${r.i || ''} · 차트 ›</span></td><td>${r.cap}조</td>${K.map(([k]) => W.map(([w]) => cell(r, k, w)).join('')).join('')}${onCell(r)}<td style="white-space:nowrap"><b style="color:${(r.pe50 || [0])[0] >= 8 ? '#e0343a' : 'inherit'}">${r.pe50 ? r.pe50[0] + '/20' : '–'}</b> <span class="sub">(5일 ${r.pe50 ? r.pe50[1] : 0})</span><div class="sub">투신 ${r.tr50 ? r.tr50[0] + '/20' : '–'}</div></td><td style="white-space:nowrap">${r.star ? '<b style="color:#e0343a">★</b> ' : ''}${r.acc ? '<span class="tg" style="color:#e0343a;border-color:#e0343a">사모 가속</span>' : (r.pe20 && r.pe20[0] > 0 ? '<span class="sub">감속</span>' : '')}<div class="sub ${r.fr20 > 0 ? 'up' : r.fr20 < 0 ? 'down' : ''}">외인 ${r.fr20 == null ? '–' : (r.fr20 > 0 ? '+' : '') + r.fr20 + '%p'}</div></td><td class="${r.d1 > 0 ? 'up' : r.d1 < 0 ? 'down' : ''}">${r.d1 ?? '–'}%</td><td class="${r.d20 > 0 ? 'up' : r.d20 < 0 ? 'down' : ''}">${r.d20 ?? '–'}%</td></tr>`).join('') || '<tr><td colspan="13" class="empty">조건에 맞는 종목 없음</td></tr>'}</tbody></table></div>`;
+  $('#ifold').onchange = e => { ifOld = e.target.checked; renderInstTable(); };
   $('#ifsort').onclick = e => { const b = e.target.closest('button'); if (b) { ifSort = b.dataset.s; renderInstTable(); } };
   $('#ifcard thead').onclick = e => { const t = e.target.closest('th[data-s]'); if (t) { ifSort = t.dataset.s; renderInstTable(); } };
   $('#ifonly').onchange = e => { ifOnly = e.target.checked; renderInstTable(); };
@@ -752,7 +755,7 @@ async function initPeStrategy() {
   const gcol = {S: '#e0343a', A: '#4f46e5', B: '#9aa0aa'};
   const tag = g => g ? `<span class="tg" style="color:${gcol[g]};border-color:${gcol[g]}">${g}급</span>` : '<span class="sub">–</span>';
   const MK = J.market || {}, SG = J.signals || [], IB = MK.ibs || [];
-  const chk = ['매수 쏠림 ov≥5', '외국인 20일 순매수', '투신 20일 순매수', 'KOSPI 60일선 또는 120일선 위', '정배열', '시총 3천억↑'];
+  const chk = ['매수 쏠림 ov≥5', '외국인 20일 순매수', '투신 20일 순매수', 'KOSPI 60일선 또는 120일선 위', '정배열'];
   const bt = [
     ['사모 엔진 A′안 전체 (2017~, 449건)', '<b class="up">+10.5%</b>', '53%', '90%', '학습/검증 A +9.7% · B +11.4% · C(분기 무작위) +1.7%'],
     ['└ S급: 52주 고점 −10% 이내', '<b class="up">+11.2%</b>', '55%', '—', '평가액 10%'],
@@ -768,7 +771,7 @@ async function initPeStrategy() {
   $('#pecard').style.display = '';
   $('#pecard').innerHTML = `<div class="sec-h"><span class="dot"></span>전략 요약 · 오늘 신호 <span class="sub">기준 ${fd(J.date)} 종가 · ${fd(J.rule_v2_from)}부터 새 규칙(사모 A′안 ⑥ + S8 비중 조절 + 하락장 IBS 엔진)</span></div>
     <div style="margin:4px 18px 10px;padding:12px 14px;border-left:3px solid #e0343a;background:rgba(224,52,58,.05);border-radius:8px;line-height:1.75;font-size:13.5px">
-      <b>아이디어</b>: ① <b>상승·조정장</b> — 사모펀드가 몸집보다 크게 사기 시작한 종목 중 <b>외국인·투신이 함께 사고</b> 이미 <b>정배열</b>인 탄탄한 종목(시총 3천억↑)을 따라 사서 60일 들고 간다. 시장이 흔들리면(변동성↑) 비중을 자동으로 줄인다.
+      <b>아이디어</b>: ① <b>상승·조정장</b> — 사모펀드가 몸집보다 크게 사기 시작한 종목 중 <b>외국인·투신이 함께 사고</b> 이미 <b>정배열</b>인 탄탄한 종목(시총 3천억↑만 신호로 표시)을 따라 사서 60일 들고 간다. 시장이 흔들리면(변동성↑) 비중을 자동으로 줄인다.
       ② <b>하락장</b>(KOSPI 60·120일선 모두 아래) — 사모 엔진은 쉬고, 남는 현금 절반으로 지수 레버리지의 <b>장 막판 투매(IBS)</b>를 하루씩 받아낸다.</div>
     <div class="kpis">
       <div class="kpi"><div class="sub">사모 엔진 진입 (모두 충족, 그날 종가)</div><b style="font-size:14px">사모 20일 ≥ 시총 10bp · 8/20일 새로 켜짐</b><div class="sub">+ 쏠림 5배↑ · 외국인·투신 20일 순매수 · KOSPI 60일선 또는 120일선 위 · 정배열 · 시총 3천억↑</div></div>
