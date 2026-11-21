@@ -87,9 +87,9 @@ function draw() {
   const X = i => L + (W - L - R) * i / Math.max(D.length - 1, 1), Y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
   let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">`;
   let s0 = 0;
-  const PR = J.prob || [], PB = J.pbase || 58, DARK = getComputedStyle(document.body).backgroundColor.match(/\d+/g).slice(0, 3).reduce((a, b) => a + +b, 0) < 200;
+  const PR = (J.prob || []).slice(a, b), PB = J.pbase || 58, DARK = getComputedStyle(document.body).backgroundColor.match(/\d+/g).slice(0, 3).reduce((a, b) => a + +b, 0) < 200;
   // 배경 = 국면색(상승장 빨강·하락장 파랑) × 힘 진하기(강 진함 → 약 옅음, 반대쪽 신호가 쌓일수록 옅어짐), 횡보장 투명
-  const LV = J.lvl || [];
+  const LV = (J.lvl || []).slice(a, b);
   const bgc = i => S[i] === 0 ? null : LV[i] ? `var(--${S[i] === 1 ? 'up' : 'dn'}${LV[i]})` : ST[S[i]][1];
   for (let i = 1; i <= D.length; i++) if (i === D.length || bgc(i) !== bgc(s0)) { const c = bgc(s0); if (c && c !== 'var(--nobg)') g += `<rect x="${X(s0)}" y="${T}" width="${Math.max(X(i) - X(s0), 1)}" height="${H - T - B}" style="fill:${c}"/>`; s0 = i; }
   for (let j = 0; j <= 4; j++) { const v = lo + (hi - lo) * j / 4; g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${Y(v) + 4}" font-size="10" text-anchor="end" fill="var(--sub)">${won(v)}</text>`; }
