@@ -4,38 +4,38 @@
 :root{--bg:#f6f7f9;--card:#fff;--fg:#1d2433;--sub:#6b7280;--line:#e5e7eb;--up:#e0343a;--down:#2f6fe0;--upbg:rgba(224,52,58,.07);--dnbg:rgba(47,111,224,.08);--warn:#c98500}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#171a21;--fg:#e8eaf0;--sub:#9aa0aa;--line:#2a2f3a;--upbg:rgba(224,52,58,.12);--dnbg:rgba(47,111,224,.15)}}
 :root[data-theme="dark"]{--bg:#0f1115;--card:#171a21;--fg:#e8eaf0;--sub:#9aa0aa;--line:#2a2f3a;--upbg:rgba(224,52,58,.12);--dnbg:rgba(47,111,224,.15)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:'Pretendard','Malgun Gothic',system-ui,sans-serif}
+*{box-sizing:border-box}html,body{overflow-x:hidden}body{margin:0;background:var(--bg);color:var(--fg);font-family:'Pretendard','Malgun Gothic',system-ui,sans-serif;font-size:15px;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
 .wrap{max-width:1180px;margin:0 auto;padding:12px 16px 40px}
 nav{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}nav a{color:var(--fg);text-decoration:none;font-size:13px;padding:6px 10px;border-radius:8px}nav a.on{background:#4f46e5;color:#fff}
-h1{font-size:22px;margin:6px 0}h2{font-size:16px;margin:0 0 6px}.sub{color:var(--sub);font-size:12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+h1{font-size:22px;margin:6px 0 2px}h2{font-size:17px;margin:0 0 8px;line-height:1.4}.sub{color:var(--sub);font-size:13px;line-height:1.6}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0;min-width:0}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.kpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px}.kpi b{font-size:18px}
-table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}
 .up{color:var(--up)}.down{color:var(--down)}.warn{color:var(--warn)}.on-up{background:var(--upbg)}.on-dn{background:var(--dnbg)}
 .scroll{overflow-x:auto}.seg button{border:1px solid var(--line);background:transparent;color:var(--fg);padding:4px 9px;border-radius:7px;cursor:pointer;margin-left:3px;font-size:12px}.seg button.on{background:#4f46e5;color:#fff;border-color:#4f46e5}#lg span{cursor:pointer;margin-right:10px;white-space:nowrap}
-details.card summary{cursor:pointer}details.card[open] summary{margin-bottom:4px}
+details.card summary{cursor:pointer;font-size:16px;line-height:1.5}details.card summary .sub{font-size:13px}details.card[open] summary{margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .pill{border:1px solid var(--line);border-radius:10px;padding:10px 12px}.pill .t{font-size:12px;color:var(--sub)}.pill .v{font-size:16px;font-weight:700;margin-top:2px}
-.rule{display:flex;gap:8px;padding:6px 8px;border-radius:8px;margin:4px 0}.rule.hit{background:var(--upbg);outline:1px solid var(--line)}
-.step{display:flex;gap:10px;align-items:flex-start;margin:6px 0}.step i{font-style:normal;display:inline-flex;width:22px;height:22px;border-radius:50%;background:#4f46e5;color:#fff;align-items:center;justify-content:center;font-size:12px;flex:none}
+.rule{display:grid;grid-template-columns:18px 1fr;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin:8px 0}.rule.hit{background:var(--upbg);border-color:var(--up)}.rule .mk{line-height:1.5}.rule .rt{min-width:0;line-height:1.5}.rule .rt>.sub{display:block;margin-top:4px}.rule .rt>div.sub{margin:6px 0 0 0!important}
+.step{display:flex;gap:10px;align-items:flex-start;margin:10px 0;line-height:1.65}.step>div{min-width:0}.step b{color:var(--fg)}.step i{font-style:normal;display:inline-flex;width:22px;height:22px;border-radius:50%;background:#4f46e5;color:#fff;align-items:center;justify-content:center;font-size:12px;flex:none}
 </style></head><body><div class="wrap">
 <nav><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="pe_flow.html">사모투신 수급전략</a><a href="market_trend.html">시장 추세</a><a href="flow_trend.html">시장추세(수급분석)</a><a href="monthly_trend.html" class="on">시장추세(매월)</a></nav>
 <h1>시장추세 — 매월 예측</h1><div class="sub" id="hd"></div>
 <!-- 2026-11-22 사용자: 대시보드는 늘 맨 위에 차트, 그다음 결론·월중 대응·근거·보조·성적·기록 -->
 <div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center"><h2 style="margin:0">KOSPI 차트 — 매월 예측</h2>
 <div><span class="seg" id="tf"></span> <span class="seg" id="rng"></span></div></div>
-<div class="sub" style="margin:4px 0">배경 = 그 달 예측(옅은 빨강 상승 · 옅은 파랑 하락) · 연한 점선 = 새 달 · 휠 = 확대 · 끌기 = 이동 · 기호(눌러서 켜기/끄기): <span id="lg"></span></div>
+<div class="sub" style="margin:6px 0 2px">배경: 옅은 빨강 = 상승 예측 달 · 옅은 파랑 = 하락 예측 달 · 점선 = 새 달 시작</div><div class="sub" style="margin:0 0 4px">기호(눌러서 켜기/끄기): <span id="lg"></span></div><div class="sub" style="font-size:12px;margin-bottom:4px">휠·두 손가락 = 확대 · 끌기 = 이동</div>
 <div id="chart" style="touch-action:pan-y;cursor:grab"></div></div>
 <div class="card" id="pred" style="border-width:2px"></div>
 <div class="card" id="today"></div>
-<details class="card" open><summary><b>근거</b> <span class="sub">— 판단 순서와 검증</span></summary><div class="sub" style="line-height:1.8;margin-top:8px">
-<b style="color:var(--fg)">① 방향 (가장 중요)</b> 월초 첫 거래일 외국인·개인 현물 순매수 ÷ 직전 20일 평균 KOSPI 거래대금 → 직전 500거래일 대비 z. 외국인 z≥+1 또는 개인 z≤−1 = ▲, 개인 z≥+1 = ▼, 그 외 ■. 그날 종가에 확정.<br>
-<b style="color:var(--fg)">② 확신·비중</b> 셋째 날 3일 누적이 같은 기준으로 여전히 강하면 유지·추가, 그저 그러면 비중 축소. '첫날+3일 둘 다 강함'은 정의 4개·두 구간 모두에서 가장 견고(월봉 높게 81~93%).<br>
-<b style="color:var(--fg)">③ 확인</b> 시장 추세 페이지 ★최종 바닥(+1)·고점(−1) 신호(첫 거래일까지 최근 20거래일).<br>
-<b style="color:var(--fg)">④ 보정</b> 트리플 크라운 하락 쪽만(①+③이 상승이 아닐 때 월·주·일 음봉 + 이평 역배열이면 −1) · 과매도 예외(20일선 −5%↓ 또는 60일 고점 −15%↓면 ▼ → ■, ■를 ▲로 올리진 않음).<br>
-<b style="color:var(--fg)">⑤ 경고(점수 밖)</b> VIX ≥ 25이고 아직 오르는 중이면 비중 주의.<br>
-<b style="color:var(--fg)">월중 대응</b> 검증(2010~ 전체 + 두 구간 일관 + 정의 강건성)을 통과한 해석만 표시. 탈락: 풋+현물 매도 = 하락 베팅, 하락 달 선물·콜 역할, 상승 달 콜 매수, FO5 대기 진입.<br>
-예측 = ①+③(+④) 점수 부호 · ▲ = 매수(첫 거래일 종가 → 월말), ▼·■ = 관망(하락 예측은 매도 근거로 약함). 성적은 매일 다시 계산. 원칙: 미래정보 금지·과적합 금지·통계적 상대 기준.<br>
-근거: notes/month-start-flow-call-001.md · foreign-three-weapons-model-001.md · docs/ANALYSIS_recheck_full_period.md · ANALYSIS_flow_definition_robust.md</div></details>
+<details class="card" open><summary><b>근거</b> <span class="sub">— 판단 순서와 검증</span></summary>
+<div class="step"><i>①</i><div><b>방향 (가장 중요)</b><br><span class="sub">월초 첫 거래일 외국인·개인 현물 순매수 ÷ 직전 20일 평균 KOSPI 거래대금 → 직전 500거래일 대비 z. 외국인 z≥+1 또는 개인 z≤−1 = ▲, 개인 z≥+1 = ▼, 그 외 ■. 그날 종가에 확정.</span></div></div>
+<div class="step"><i>②</i><div><b>확신·비중</b><br><span class="sub">셋째 날 3일 누적이 같은 기준으로 여전히 강하면 유지·추가, 그저 그러면 비중 축소. '첫날+3일 둘 다 강함'은 정의 4개·두 구간 모두에서 가장 견고(월봉 높게 81~93%).</span></div></div>
+<div class="step"><i>③</i><div><b>확인</b><br><span class="sub">시장 추세 페이지 ★최종 바닥(+1)·고점(−1) 신호(첫 거래일까지 최근 20거래일).</span></div></div>
+<div class="step"><i>④</i><div><b>보정</b><br><span class="sub">트리플 크라운 하락 쪽만(①+③이 상승이 아닐 때 월·주·일 음봉 + 이평 역배열이면 −1) · 과매도 예외(20일선 −5%↓ 또는 60일 고점 −15%↓면 ▼ → ■, ■를 ▲로 올리진 않음).</span></div></div>
+<div class="step"><i>⑤</i><div><b>경고(점수 밖)</b><br><span class="sub">VIX ≥ 25이고 아직 오르는 중이면 비중 주의.</span></div></div>
+<div class="step"><i>•</i><div><b>월중 대응</b><br><span class="sub">검증(2010~ 전체 + 두 구간 일관 + 정의 강건성)을 통과한 해석만 표시. 탈락: 풋+현물 매도 = 하락 베팅, 하락 달 선물·콜 역할, 상승 달 콜 매수, FO5 대기 진입.</span></div></div>
+<div class="sub" style="margin-top:8px">예측 = ①+③(+④) 점수 부호 · ▲ = 매수(첫 거래일 종가 → 월말), ▼·■ = 관망(하락 예측은 매도 근거로 약함). 성적은 매일 다시 계산. 원칙: 미래정보 금지·과적합 금지·통계적 상대 기준.</div>
+<div class="sub" style="margin-top:8px">근거: notes/month-start-flow-call-001.md · foreign-three-weapons-model-001.md · docs/ANALYSIS_recheck_full_period.md · ANALYSIS_flow_definition_robust.md</div></details>
 <details class="card"><summary><b>보조 신호</b> <span class="sub">— 바닥(승률 70%↑)·고점·큰 변곡 신호 (예측 점수 밖)</span></summary><div id="aux" style="margin-top:8px"></div></details>
 <details class="card"><summary><b>🧪 검증 중 후보</b> <span class="sub">— 2026-12부터 실전 기록, 예측 점수 밖</span></summary><div id="cand" style="margin-top:8px"></div></details>
 <div class="card"><h2>성적 — 예측이 얼마나 맞았나</h2><div class="sub" id="psub"></div><div class="scroll"><table id="ptab"></table></div>
@@ -92,7 +92,7 @@ const prob = p => { const x = ST[String(p)]; if (!x || !x.learn) return ''; retu
     <div class="sub" style="margin:3px 0 0 14px">오늘: ${T.put_s3 ? '<b>3일 연속 강함</b>' : T.put_s1 ? '<b>하루만 강함</b>' : '해당 없음'} (풋 하루 z ${zz(T.zput)} · 3일 합 z ${zz(T.zput3)}) · 이번 달 누적 ${T.mtd > 0 ? '+' : ''}${T.mtd ?? '–'}% · ${T.fallen ? '<b class="down">이미 많이 하락한 상태</b>' : '이미 하락 아님'}</div>`});
   el.innerHTML = `<h2 style="margin:0">월중 대응 — 오늘 외국인 선물·옵션을 이렇게 읽기</h2>
     <div class="sub" style="margin:4px 0 8px">${fd(T.d)} 기준 · 이번 달 현물 국면: <b style="color:var(--fg)">${T.reg}</b> · KOSPI ${T.ret > 0 ? '+' : ''}${T.ret}% · 하루 z(±1.5 이상이면 급증): 외국인 현물(거래대금 대비) ${zz(T.zspot)} · 선물 ${zz(T.zfut)} · 풋 ${zz(T.zput)} · 콜 ${zz(T.zcall)}</div>
-    ${rules.filter(r => r.ok).map(r => `<div class="rule ${r.on && (r === rules[0] ? fs : r === rules[1] ? pb : r.put ? ps : true) ? 'hit' : ''}">${r === rules[0] ? (fs ? '●' : '○') : r === rules[1] ? (pb ? '●' : '○') : r.put ? (ps ? '●' : '○') : '•'} ${r.txt}</div>`).join('')}
+    ${rules.filter(r => r.ok).map(r => `<div class="rule ${r.on && (r === rules[0] ? fs : r === rules[1] ? pb : r.put ? ps : true) ? 'hit' : ''}"><span class="mk">${r === rules[0] ? (fs ? '●' : '○') : r === rules[1] ? (pb ? '●' : '○') : r.put ? (ps ? '●' : '○') : '•'}</span><div class="rt">${r.txt}</div></div>`).join('')}
     <div class="sub" style="margin-top:6px">● = 오늘 해당 · 검증에서 탈락한 해석(풋+현물 매도 = 하락 베팅, 하락 달 선물·콜 역할, 상승 달 콜 매수)은 표시하지 않음</div>`;
 })();
 (() => {
