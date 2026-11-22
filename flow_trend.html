@@ -22,7 +22,7 @@ table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{border-bottom:1
 <div class="card" id="exp"></div>
 <div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center"><h2 style="margin:0">KOSPI 차트 — 월초 판정(상승·하락·판단불가)</h2>
 <div><span class="seg" id="tf"></span> <span class="seg" id="rng"></span></div></div>
-<div class="sub" style="margin:4px 0">마우스 휠 = 확대·축소 · 끌기 = 기간 이동 · 두 번 클릭 = 기본 범위 · 기호(눌러서 켜기/끄기): <span id="lg"></span></div>
+<div class="sub" style="margin:4px 0">마우스 휠 = 확대·축소 · 끌기 = 기간 이동 · 두 번 클릭 = 기본 범위 · 연한 점선 = 새 달 시작(월봉은 새 해) · 기호(눌러서 켜기/끄기): <span id="lg"></span></div>
 <div id="chart" style="touch-action:pan-y;cursor:grab"></div></div>
 <div class="card"><h2>판정별 성적 — 상승 / 하락 / 판단불가</h2><div class="sub" id="pfsub"></div><div class="scroll"><table id="bperf"></table></div>
 <div class="sub" style="margin-top:8px;line-height:1.7" id="bnote"></div>
@@ -136,6 +136,9 @@ function draw() {
   let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">`;
   for (let j = 0; j <= 4; j++) { const v = lo + (hi - lo) * j / 4; g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${Y(v) + 4}" font-size="10" text-anchor="end" fill="var(--sub)">${Math.round(v).toLocaleString('ko-KR')}</text>`; }
   const step = Math.max(1, Math.ceil(V.length / Math.max(3, Math.floor((W - L - R) / 75))));
+  // 매월 첫 영업일 연한 점선(월봉 화면에선 새 해)
+  for (let i = 1; i < V.length; i++) { const p0 = TF === 'M' ? V[i - 1].d1.slice(0, 4) : V[i - 1].d1.slice(0, 6), p1 = TF === 'M' ? V[i].d0.slice(0, 4) : V[i].d1.slice(0, 6);
+    if (p0 !== p1) g += `<line x1="${X(i) - bw / 2}" x2="${X(i) - bw / 2}" y1="${T}" y2="${H - Bt}" stroke="var(--sub)" stroke-width="1" stroke-dasharray="2 4" opacity=".35"/>`; }
   V.forEach((c, i) => {
     const col = c.c >= c.o ? 'var(--up)' : 'var(--down)', x = X(i), w = Math.max(1, bw * .64);
     g += `<line x1="${x}" x2="${x}" y1="${Y(c.h)}" y2="${Y(c.l)}" stroke="${col}" stroke-width="${bw < 3 ? .6 : 1}"/><rect x="${x - w / 2}" y="${Y(Math.max(c.o, c.c))}" width="${w}" height="${Math.max(1, Math.abs(Y(c.o) - Y(c.c)))}" fill="${col}"/>`;
