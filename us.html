@@ -218,7 +218,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
 <body>
 <div class="topbar"><div class="in">
   <div class="brand"><i></i>My Dash</div>
-  <nav class="navs"><a href="index.html">국내 다이버전스</a><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="us_div.html">미국 다이버전스</a><a href="pe_flow.html">사모투신 수급전략</a><a href="market_trend.html">시장 추세</a></nav>
+  <nav class="navs"><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="pe_flow.html">사모투신 수급전략</a><a href="market_trend.html">시장 추세</a></nav>
   <div class="sq" id="sqbox" style="display:none"><input id="sq" type="search" placeholder="종목 검색 (이름·코드)" autocomplete="off"><div id="sqlist"></div></div>
   <span class="day" id="day"></span>
 </div></div>
@@ -230,6 +230,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <section class="card" id="tdcard" style="display:none"></section>
   <section class="card" id="candcard" style="display:none"></section>
   <section class="card" id="ppcard" style="display:none"></section>
+  <section class="card" id="botcard" style="display:none"></section>
   <section class="card" id="optcard" style="display:none"></section>
   <section class="card" id="indcard" style="display:none"></section>
   <section class="card" id="rmcard" style="display:none"></section>
@@ -649,6 +650,65 @@ async function initRegime() {
   $('#regcard').appendChild(box);
 }
 setTimeout(initRegime);
+// ── 지수 바닥 신호: 옵션 IV 공포 + 하락추세 ADX 꺾임 (research/bottom_combo_study.py → bottom_signal.json, 2026-11-21 검증) ──
+async function initBottom() {
+  if (META.market !== 'KR') return;
+  let B; try { B = await (await fetch(`${META.charts}/bottom_signal.json`, {cache: 'no-store'})).json(); } catch (e) { return; }
+  const ok = v => v ? '<b style="color:#e0343a">✓</b>' : '<span class="sub">✗</span>';
+  const nOk = B.conds.filter(c => c.ok).length;
+  const state = B.signal ? '<b style="color:#e0343a">바닥 신호 켜짐</b>' : nOk === 2 ? '<b style="color:#c98500">한 조건 남음</b>' : '<span>신호 없음</span>';
+  const pct = (v, d = 1) => v == null ? '–' : `${v > 0 ? '+' : ''}${v.toFixed(d)}%`;
+  $('#botcard').style.display = '';
+  $('#botcard').innerHTML = `<div class="sec-h"><span class="dot"></span>지수 바닥 신호 — 옵션 IV 공포 + ADX 꺾임 <span class="sub">${fmtD(B.date)} · KOSPI200 ${B.k200} · IV = 근월물 등가 콜·풋 내재변동성(KIS 옵션 일봉으로 직접 계산) · 세 조건이 같은 날 맞으면 신호</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="sub">상태</div><b style="font-size:22px">${state}</b><div class="sub">3개 중 ${nOk}개 충족</div></div>
+      <div class="kpi"><div class="sub">등가 IV</div><b style="font-size:22px">${B.iv}%</b><div class="sub">1년 80% 분위 ${B.q80}% · 95%(공포 극단) ${B.q95}%</div></div>
+      ${B.conds.map(c => `<div class="kpi"><div class="sub">${ok(c.ok)} ${c.name}</div><div style="font-size:13px;margin-top:4px">${c.val}</div></div>`).join('')}
+    </div>
+    <div class="sub" style="padding:0 20px 6px;line-height:1.7">참고: ${B.near.map(c => `${ok(c.ok)} ${c.name} — ${c.val}`).join(' · ')}</div>
+    ${B.composite ? (() => { const C = B.composite, st = s => s ? `${s['횟수']}회 · 20일 ${pct(s['20일%'], 2)}·${s['20일 상승%']}% · 역행 ${pct(s['20일 역행%'])}` : '';
+      return `<div style="margin:4px 18px 8px;padding:10px 14px;border-left:3px solid #4f46e5;background:rgba(79,70,229,.05);border-radius:8px;line-height:1.75;font-size:13px">
+      <b>보조 조합 · 종합</b> <span class="sub">KOSPI 2000~ 검증(세 구간 일관) · ${fmtD(C.date)} KOSPI ${C.kospi}</span>
+      <ul style="margin:4px 0 0 18px;padding:0">${C.aux.map(a => `<li>${a.on ? '<b style="color:#e0343a">● 켜짐</b>' : '<span class="sub">○ 꺼짐</span>'} ${a.name} <span class="sub">— ${st(a.stat)}</span></li>`).join('')}</ul>
+      <div class="sub" style="margin-top:4px">지금 켜진 트리거(최근 3일): ${C.triggers.length ? C.triggers.join(', ') : '없음'} · 바닥권 신호(최근 10일): ${C.contexts.length ? C.contexts.join(', ') : '없음'} · 단순 점수 ${C.p1}${C.p2 != null ? ` · IV 가중 ${C.p2}` : ''}${C.prob_p != null ? ` · 모델 확률 ${(C.prob_p * 100).toFixed(0)}% (신호 문턱 ${(C.thr_p * 100).toFixed(0)}%)` : ''}</div>
+      <div class="sub">검증 요약: 지표를 많이 섞은 점수·모델은 구간마다 들쭉날쭉했고, <b>핵심 조합(ADX 꺾임 + 옵션 IV 공포)이 가장 좋았다</b> — 보조 조합은 옵션이 없던 2000년대식 장세 대비용</div></div>`; })() : ''}
+    ${B.foreign ? (() => { const G = B.foreign, s = G.stat || {}, f = k => { const x = Object.entries(s).find(([n]) => n.startsWith(k)); return x ? `${x[1]['횟수']}회 · 20일 ${pct(x[1]['20일 성과%(신호 방향)'], 2)}·${x[1]['20일 적중%']}%` : ''; };
+      return `<div style="margin:4px 18px 8px;padding:10px 14px;border-left:3px solid #1b9e6c;background:rgba(27,158,108,.06);border-radius:8px;line-height:1.75;font-size:13px">
+      <b>외국인 수급 바닥 신호 (현물·옵션)</b> <span class="sub">KOSPI 2000~ 검증(세 구간 일관) · KIS 시장별 투자자매매동향 · ${fmtD(G.date)}</span>
+      <ul style="margin:4px 0 0 18px;padding:0">
+        <li>${G.fb1_on ? '<b style="color:#e0343a">● 켜짐</b>' : G.fb1_recent ? '<b style="color:#c98500">◐ 최근 20일 안</b>' : '<span class="sub">○ 꺼짐</span>'} 외국인 20일 투매 극단(1년 대비 z ≤ −2) — 바닥권 진입 <span class="sub">${f('FB1')} · 마지막 ${G.fb1_last ? fmtD(G.fb1_last) : '–'}</span></li>
+        <li>${G.fb2_on ? '<b style="color:#e0343a">● 켜짐</b>' : '<span class="sub">○ 꺼짐</span>'} 투매 극단 뒤 외국인 5일 순매수 첫 전환 — 돌아서는 날 <span class="sub">${f('FB2')}</span></li>
+        ${G.fo5 ? `<li>${G.fo5.on ? '<b style="color:#e0343a">● 켜짐</b>' : G.fo5.recent ? '<b style="color:#c98500">◐ 최근 20일 안</b>' : '<span class="sub">○ 꺼짐</span>'} 외국인 <b>옵션</b> 하락베팅 극단(콜 순매수 − 풋 순매수 20일 합, 1년 하위 5%) — 역발상 반등 <span class="sub">${f('FO5')} · 2010~ 두 구간 일관 · 지금 1년 중 ${G.fo5.pct}% 위치 · 마지막 ${G.fo5.last ? fmtD(G.fo5.last) : "–"} · 옵션 수급 데이터 ${fmtD(G.fo5.date)}까지(KRX 수동)</span></li>` : ''}
+      </ul>
+      <div class="sub" style="margin-top:4px">지금: 외국인 20일 순매수 ${G.f20 > 0 ? '+' : ''}${G.f20}조 (z ${G.fz}) · 5일 ${G.f5 > 0 ? '+' : ''}${G.f5}조 · 연기금 20일 z ${G.dz}
+        · 주의: 핵심 신호는 외국인이 <b>아직 팔 때</b>가 더 좋았음(${f('핵심 바닥 + 외국인 5일 순매도')}) vs 이미 살 때(${f('핵심 바닥 + 외국인 5일 순매수')}) → 외국인 순매수를 핵심 신호의 조건으로 쓰지 않음</div></div>`; })() : ''}
+    ${B.flow3 ? (() => { const T = B.flow3, cl = s => s === '매수' ? '#e0343a' : s === '매도' ? '#2a6fdb' : 'var(--sub,#888)', cn = T.combo_now;
+      return `<div style="margin:4px 18px 8px;padding:10px 14px;border-left:3px solid #7a4fd0;background:rgba(122,79,208,.06);border-radius:8px;line-height:1.75;font-size:13px">
+      <b>외국인 수급 3종 종합 (현물·선물·옵션)</b> <span class="sub">하나만 보지 않고 세 수급 조합으로 판단 · 20일 합의 1년 백분위(매도 ≤20% / 매수 ≥80%) · KOSPI 2010-07~ · ${fmtD(T.date)}</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin:6px 0">${Object.entries(T.cur).map(([k, v]) => `<div style="flex:1;min-width:120px;padding:6px 10px;border:1px solid rgba(128,128,128,.25);border-radius:8px"><div class="sub">${k}${k === '옵션' ? ' (콜−풋 방향성)' : ''}</div><b style="color:${cl(v.state)}">${v.state}</b> <span class="sub">${v.pct}% · 20일 ${v.sum20 > 0 ? '+' : ''}${v.sum20}조</span></div>`).join('')}
+        <div style="flex:1;min-width:120px;padding:6px 10px;border:1px solid rgba(128,128,128,.25);border-radius:8px"><div class="sub">3수급 합산 점수</div><b>${T.score}%</b> <span class="sub">≤20% 전방위 매도 = 역발상 반등</span></div></div>
+      ${cn ? `<div>지금 조합 <b>현물 ${cn['현물']} · 선물 ${cn['선물']} · 옵션 ${cn['옵션']}</b> → 과거 20일 ${pct(cn['20일%'], 2)} · 상승 ${cn['20일 상승%']}% <span class="sub">(${cn['일수']}일 · 2010~17 ${cn['2010~17']} · 2018~26 ${cn['2018~26']} · 기준 ${pct(T.base20, 2)})</span></div>` : ''}
+      <div class="sub" style="margin-top:4px">좋았던 조합: ${T.top.map(r => `현${r['현물']}·선${r['선물']}·옵${r['옵션']} ${pct(r['20일%'], 2)}`).join(' / ')}<br>나빴던 조합: ${T.bottom.map(r => `현${r['현물']}·선${r['선물']}·옵${r['옵션']} ${pct(r['20일%'], 2)}`).join(' / ')}<br>
+      읽는 법: 옵션 하락베팅(외국인 풋 쏠림)은 대체로 헤지라 역발상 반등, '선물 매수 + 옵션 하락베팅'은 헤지된 롱. 반대로 '선물 매도 + 옵션 상승베팅'은 30%만 올랐음. 일별 표본이 겹치고 27칸 다중비교라 표본 큰 조합만 믿을 것</div></div>`; })() : ''}
+    <div class="sub" style="padding:0 20px 8px;line-height:1.7"><b>읽는 법</b> — IV가 공포 구간이면 '바닥권 진입', 그 상태에서 하락 추세의 ADX가 꺾이는 날이 '돌아서는 날'. IV 극단만 보고 사면 평균 −4.8%를 더 맞았고, 공포 없이 나온 ADX 꺾임은 2018년 이후 약했다(10일 −1.2%·29%).</div>
+    <div style="overflow:auto;padding:0 18px 8px"><table class="rmt"><thead><tr><th style="text-align:left">검증 (KOSPI200 2010-07~, 기준 10일 ${pct(B.base.r10, 2)}·${B.base.u10}% / 20일 ${pct(B.base.r20, 2)}·${B.base.u20}%)</th><th>횟수</th><th>10일</th><th>20일</th><th>20일 최대 역행</th></tr></thead><tbody>
+      ${B.stat.filter(s => /단독|C1 A \\+ 최근 20|C2|반대/.test(s['신호'])).map(s => `<tr${/C2/.test(s['신호']) ? ' style="background:rgba(224,52,58,.07)"' : ''}><td style="text-align:left">${s['신호'].replace('C2 A + 오늘 IV 1년 80% 이상', '<b>이 카드의 신호: ADX 꺾임 + IV 1년 80% 이상</b>')}</td><td>${s['횟수']}</td><td>${pct(s['10일%'], 2)} · ${s['10일 상승%']}%</td><td>${pct(s['20일%'], 2)} · ${s['20일 상승%']}%</td><td>${pct(s['20일 최대역행%'])}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="sub" style="padding:0 20px 6px">최근 신호: ${(B.hist || []).slice().reverse().map(h => `${fmtD(h.date)} (${h.k200} → 10일 ${pct(h.r10)} · 20일 ${pct(h.r20)})`).join(' · ') || '없음'}</div>
+    <div id="botchart" style="height:220px;margin:0 16px 16px"></div>`;
+  const ch = LightweightCharts.createChart($('#botchart'), {layout: {background: {color: css('--panel')}, textColor: css('--muted'), fontSize: 11},
+    grid: {vertLines: {visible: false}, horzLines: {color: css('--line')}}, autoSize: true, leftPriceScale: {visible: true, borderVisible: false}, rightPriceScale: {borderVisible: false}});
+  const S = B.series, tt = S.t.map(x => `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6, 8)}`);
+  const ln = (arr, color, scale, title, w = 2, style = 0) => ch.addLineSeries({color, lineWidth: w, lineStyle: style, priceScaleId: scale, priceLineVisible: false, title}).setData(tt.map((t, i) => arr[i] == null ? null : {time: t, value: arr[i]}).filter(Boolean));
+  const kS = ch.addLineSeries({color: css('--ink'), lineWidth: 2, priceScaleId: 'left', priceLineVisible: false, title: 'KOSPI200'});
+  kS.setData(tt.map((t, i) => ({time: t, value: S.k200[i]})));
+  kS.setMarkers(tt.map((t, i) => S.sig[i] ? {time: t, position: 'belowBar', color: '#e0343a', shape: 'arrowUp', text: '바닥'} : null).filter(Boolean));
+  ln(S.iv, '#4f46e5', 'right', 'IV %');
+  ln(S.q80, '#c98500', 'right', '80%', 1, 2);
+  ln(S.q95, '#e0343a', 'right', '95%', 1, 2);
+  ch.timeScale().fitContent();
+}
+setTimeout(initBottom);
 // ── 사모·투신 유의미 매수 — 1개월(20일)·1주(5일)·당일 (research/inst_top50.py → inst_flow_table.json) ──
 let IFT = null, ifSort = 'both20', ifOnly = true, ifQ = '', ifOld = false;
 async function initInstTable() {
