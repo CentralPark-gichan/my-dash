@@ -30,7 +30,7 @@ table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{border-bottom:1
 <div class="card"><h2>월별 판정 기록 (최근 24개월)</h2><div class="scroll"><table id="hist"></table></div></div>
 <div class="card sub" style="line-height:1.8"><b style="color:var(--fg)">판정 기준과 읽는 법</b><br>
 변곡 시점(옵션명가 '변곡의 원리'): 월이 바뀔 때 3영업일, 연이 바뀔 때 5영업일, 월물 옵션 만기 전후 3영업일. 이 구간의 수급 특이사항이 그 달(그 월물 기간)의 봉이 직전 봉보다 높게 있을지 낮게 있을지를 가른다는 가설을 검증.<br>
-수급 특이 = 순매수 ÷ 직전 20일 평균 KOSPI 거래대금(시장 참여 대비 쏠림)을 직전 500거래일 분포로 표준화한 z(그날까지 정보만) — |z|≥1이면 특이. 2026-11-22부터 이 기준(원화·시장 규모 변화 보정, 원칙 기반 변경·기준선 조정 없음). 이전 금액 기준 z는 참고로 함께 표시. 적중 = 이번 봉 종가가 직전 봉 종가보다 높게(매수 쪽) / 낮게(경계 쪽) 끝난 비율. 고저 = 고가·저가가 둘 다 직전 봉보다 높은(낮은) 비율. 둘째 날 이후 = 첫 거래일 종가 → 월말 종가(첫날 움직임을 뺀 순수 예측분).<br>
+수급 특이 = 순매수 ÷ 직전 20일 평균 KOSPI 거래대금(시장 참여 대비 쏠림)을 직전 500거래일 분포로 표준화한 z(그날까지 정보만) — |z|≥1이면 특이. 2026-11-22부터 이 기준(원화·시장 규모 변화 보정, 원칙 기반 변경·기준선 조정 없음). 적중 = 이번 봉 종가가 직전 봉 종가보다 높게(매수 쪽) / 낮게(경계 쪽) 끝난 비율. 고저 = 고가·저가가 둘 다 직전 봉보다 높은(낮은) 비율. 둘째 날 이후 = 첫 거래일 종가 → 월말 종가(첫날 움직임을 뺀 순수 예측분).<br>
 변동성(2026-11-22 추가): RV = KOSPI 20일 실현변동성, VIX = 미국 VIX(하루 시차), IV = KOSPI200 근월 등가 내재변동성. 월초 첫날 동안 전월 말 대비 −5% 이상 떨어지면 '진정', +5% 이상 오르면 '상승'. 변동성은 수급과 같은 방향일 때 확신도를 올리는 보조로 쓰고, 결합 신호는 검증 표본이 쌓일 때까지 '◇ 후보'로 표시됨(docs/ANALYSIS_flow_pivot_vol.md). 외국인 매수는 IV가 낮거나 진정될 때보다 공포가 오를 때 산 경우가 더 잘 맞았음.<br>
 검증에서 걸러진 것: 현물·선물·옵션 3종을 합친 점수(오히려 흐려짐), 옵션 방향성(구간 판단에 보탬 없음), 연초 5일(26년 중 특이 연도가 너무 적어 판단 불가), 외국인 현물 매도 특이(하방은 약함 — 한국 지수 상승 편향).<br>
 수급은 '외국인 따라가기, 개인 반대로'가 월 단위에서 통했고, 단독 예측보다 다른 신호(시장 추세 페이지의 바닥·고점 신호)와 같은 방향일 때 무게를 둠.<br>
@@ -68,8 +68,8 @@ document.getElementById('now').innerHTML = `<h2>이번 달 (${fm(N.month)}) 월�
   <div style="margin:8px 0 10px">${big}</div>
   <div class="sub" style="margin-bottom:8px">${N.call > 0 ? st2(BN.stat.up) : N.call < 0 ? st2(BN.stat.down) : N.call === 0 ? `판단불가 달의 과거 성적: 높게 끝난 비율 ${BN.stat.none.learn.hit}% → 최근 ${BN.stat.none.val ? BN.stat.none.val.hit : '–'}%(동전 던지기) · 월 변화 폭 평균 ${BN.stat.none.learn.absmv}%(상승·하락 신호 달 ${BN.stat.up.learn.absmv}%·${BN.stat.down.learn.absmv}%)` : ''}</div>
   <div class="kpis">
-    <div class="kpi"><div class="sub">외국인 현물 (월초 첫날, 거래대금 대비 z)</div>${zt(N.zf)}<div class="sub">${N.sf != null ? (N.sf > 0 ? '+' : '') + N.sf + '조원 · ' : ''}+1 이상이면 상승 쪽 · 참고: 금액 기준 z ${N.zf_raw ?? '–'}</div></div>
-    <div class="kpi"><div class="sub">개인 현물 (거래대금 대비 z)</div>${zt(N.zi)}<div class="sub">${N.si != null ? (N.si > 0 ? '+' : '') + N.si + '조원 · ' : ''}−1 이하 상승 쪽 / +1 이상 하락 쪽 · 참고: 금액 기준 z ${N.zi_raw ?? '–'}</div></div>
+    <div class="kpi"><div class="sub">외국인 현물 (월초 첫날, 거래대금 대비 z)</div>${zt(N.zf)}<div class="sub">${N.sf != null ? (N.sf > 0 ? '+' : '') + N.sf + '조원 · ' : ''}+1 이상이면 상승 쪽</div></div>
+    <div class="kpi"><div class="sub">개인 현물 (거래대금 대비 z)</div>${zt(N.zi)}<div class="sub">${N.si != null ? (N.si > 0 ? '+' : '') + N.si + '조원 · ' : ''}−1 이하 상승 쪽 / +1 이상 하락 쪽</div></div>
     <div class="kpi"><div class="sub">변동성 월초 변화 (전월 말 대비)</div>${vc(N.rv_ch, 'RV')}<div class="sub">VIX ${vc(N.vix_ch)} · IV ${vc(N.iv_ch)} · 변동성은 수급과 함께일 때만 판정에 씀</div></div>
     <div class="kpi"><div class="sub">이번 달 KOSPI vs 전월 종가</div><b class="${pos}">${num(N.now)}</b><div class="sub">전월 종가 ${num(N.prev_close)} · 이번 달 시가 ${num(N.open)}</div></div>
   </div>
