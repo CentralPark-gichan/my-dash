@@ -22,7 +22,7 @@ details.card summary{cursor:pointer;font-size:16px;line-height:1.5}details.card 
 <h1>시장추세 — 매월 예측</h1><div class="sub" id="hd"></div>
 <!-- 2026-11-22 사용자: 대시보드는 늘 맨 위에 차트, 그다음 결론·월중 대응·근거·보조·성적·기록 -->
 <div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center"><h2 style="margin:0">KOSPI 차트 — 매월 예측</h2>
-<div><span class="seg" id="tf"></span> <span class="seg" id="rng"></span></div></div>
+<div><span class="seg" id="tf"></span> <span class="seg" id="rng"></span> <span class="seg" id="ewbtn"><button class="on" title="보이는 구간으로 엘리어트 자동 카운트">엘리어트</button></span></div></div>
 <div class="sub" style="margin:6px 0 2px">배경: 옅은 빨강 = 상승 예측 달 · 옅은 파랑 = 하락 예측 달 · 점선 = 새 달 시작</div><div class="sub" style="margin:0 0 4px">기호(눌러서 켜기/끄기): <span id="lg"></span></div><div class="sub" style="font-size:12px;margin-bottom:4px">휠·두 손가락 = 확대 · 끌기 = 이동</div>
 <div id="chart" style="touch-action:pan-y;cursor:grab"></div></div>
 <div class="card" id="pred" style="border-width:2px"></div>
@@ -277,7 +277,9 @@ setTimeout(() => {  // 월중 대응 카드가 그려진 뒤 실행
     const sub26 = A.filter(i => D[i] >= '2026'), sub10 = A.filter(i => D[i] >= '2010');
     const medPath = ids => Array.from({length: 21}, (_, h) => q(ids.map(i => C[i + h] / C[i] - 1), .5));
     // 그림
-    const W = 640, Hh = 230, P = 40;
+    // 2026-11-22 사용자: 최근 6개월 실제 차트 + 향후 20일 경로를 한 그림에
+    const W = 900, Hh = 300, P = 52, HB = Math.min(120, t);
+    const hist = Array.from({length: HB + 1}, (_, k) => C[t - HB + k] / base - 1);
     const col = h => A.map(i => C[i + h] / C[i] - 1);
     const bands = Array.from({length: 21}, (_, h) => [q(col(h), .1), q(col(h), .25), q(col(h), .75), q(col(h), .9)]);
     const sp = {up: grp.up.length ? medPath(grp.up) : null, box: grp.box.length ? medPath(grp.box) : null, dn: grp.dn.length ? medPath(grp.dn) : null};
@@ -286,9 +288,10 @@ setTimeout(() => {  // 월중 대응 카드가 그려진 뒤 실행
     const zones = (LV.zones || []).map(z => ({...z, k: CV ? z.mid * CV : null, r: CV ? z.mid * CV / base - 1 : null})).filter(z => z.r != null);
     const supZ = zones.filter(z => z.r < -0.003).sort((a, b) => b.r - a.r), resZ = zones.filter(z => z.r > 0.003).sort((a, b) => a.r - b.r);
     const near = [...supZ.slice(0, 3), ...resZ.slice(0, 3)];
-    const allv = bands.flat().concat(...Object.values(sp).filter(Boolean)).concat(near.filter(z => Math.abs(z.r) < 0.25).map(z => z.r));
+    const allv = hist.concat(bands.flat()).concat(...Object.values(sp).filter(Boolean)).concat(near.filter(z => Math.abs(z.r) < 0.25).map(z => z.r));
     const lo = Math.min(...allv, -0.02), hi = Math.max(...allv, 0.02);
-    const X = h => P + h * (W - P - 10) / 20, Y = v => 8 + (hi - v) / (hi - lo) * (Hh - 34);
+    const FW = (W - P - 10) * 0.55;  // 과거 6개월 55% · 향후 20일 45%
+    const X = h => h <= 0 ? P + (h + HB) / HB * FW : P + FW + h / 20 * (W - P - 10 - FW), Y = v => 8 + (hi - v) / (hi - lo) * (Hh - 34);
     const area = (a, b) => `M${bands.map((v, h) => `${X(h).toFixed(1)},${Y(v[a]).toFixed(1)}`).join('L')}L${bands.slice().reverse().map((v, k) => `${X(20 - k).toFixed(1)},${Y(v[b]).toFixed(1)}`).join('L')}Z`;
     const tds = S.tdays || [];
     // 갈림길 = 시나리오를 가르는 일정(반등·하락 조건이 적힌 것), 번호는 날짜 순
@@ -297,7 +300,11 @@ setTimeout(() => {  // 월중 대응 카드가 그려진 뒤 실행
     keyEv.forEach((e, i) => { e.no = NUM[i] || '•'; e.D = e.past ? 0 : tds.indexOf(e.d) + 1; });
     const evDay = {};
     (S.ev || []).forEach(e => { const k = tds.indexOf(e.d); if (k >= 0 && e.k !== 'wk') (evDay[k + 1] = evDay[k + 1] || []).push(e); });
-    let svg = `<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;height:auto;max-height:280px;margin-top:6px">
+    let svg = `<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;height:auto;max-height:380px;margin-top:6px">
+      <rect x="${X(0)}" y="8" width="${X(20) - X(0)}" height="${Hh - 34}" fill="var(--line)" opacity=".25"/>
+      <text x="${X(0) + 4}" y="20" font-size="10.5" fill="var(--sub)">향후 20거래일 →</text>
+      <polyline points="${hist.map((v, k) => `${X(k - HB).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--fg)" stroke-width="1.6"/>
+      ${D[t] === '가정' ? `<line x1="${X(-1)}" x2="${X(0)}" y1="${Y(hist[HB - 1])}" y2="${Y(0)}" stroke="var(--fg)" stroke-dasharray="3 3" stroke-width="1.6"/>` : ''}
       <path d="${area(0, 3)}" fill="var(--line)" opacity=".5"/><path d="${area(1, 2)}" fill="var(--line)"/>
       <line x1="${P}" x2="${W - 10}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--sub)" stroke-dasharray="3 3"/>`;
     Object.entries(evDay).forEach(([k, es]) => {
@@ -310,14 +317,15 @@ setTimeout(() => {  // 월중 대응 카드가 그려진 뒤 실행
     });
     near.filter(z => z.r >= lo && z.r <= hi).forEach(z => {
       const col = z.r < 0 ? 'var(--up)' : 'var(--down)', strong = z.n >= 2;
-      svg += `<line x1="${P}" x2="${W - 10}" y1="${Y(z.r)}" y2="${Y(z.r)}" stroke="${col}" stroke-width="${strong ? 1.4 : .8}" stroke-dasharray="6 4" opacity="${strong ? .75 : .45}"/>
+      svg += `<line x1="${X(-HB)}" x2="${W - 10}" y1="${Y(z.r)}" y2="${Y(z.r)}" stroke="${col}" stroke-width="${strong ? 1.4 : .8}" stroke-dasharray="6 4" opacity="${strong ? .75 : .45}"/>
         <text x="${W - 12}" y="${Y(z.r) - 3}" font-size="10" text-anchor="end" fill="${col}" opacity=".9">${z.r < 0 ? '지지' : '저항'} ${Math.round(z.k).toLocaleString()}${strong ? ' (' + z.n + '겹)' : ''}</text>`;
     });
     [['up', 'var(--up)'], ['box', '#9aa0aa'], ['dn', 'var(--down)']].forEach(([k, c]) => {
       if (sp[k]) svg += `<polyline points="${sp[k].map((v, h) => `${X(h).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${c}" stroke-width="2.5"/>`;
     });
-    [lo, 0, hi].forEach(v => svg += `<text x="2" y="${Y(v) + 4}" font-size="10" fill="var(--sub)">${pct(v * 100)}</text>`);
-    [0, 5, 10, 15, 20].forEach(h => svg += `<text x="${X(h)}" y="${Hh - 14}" font-size="10" text-anchor="middle" fill="var(--sub)">${h ? 'D+' + h + (tds[h - 1] ? ' ' + fdd(tds[h - 1]) : '') : '지금'}</text>`);
+    for (let j = 0; j <= 4; j++) { const v = lo + (hi - lo) * j / 4; svg += `<text x="2" y="${Y(v) + 4}" font-size="10" fill="var(--sub)">${Math.round(base * (1 + v)).toLocaleString()}</text><line x1="${P}" x2="${W - 10}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width=".5"/>`; }
+    [-HB, -Math.round(HB * 2 / 3), -Math.round(HB / 3)].forEach(h => { const d = D[t + h]; if (d && d !== '가정') svg += `<text x="${X(h)}" y="${Hh - 14}" font-size="10" text-anchor="middle" fill="var(--sub)">${d.slice(2, 4)}.${d.slice(4, 6)}.${d.slice(6)}</text>`; });
+    [0, 10, 20].forEach(h => svg += `<text x="${X(h)}" y="${Hh - 14}" font-size="10" text-anchor="middle" fill="var(--sub)">${h ? 'D+' + h + (tds[h - 1] ? ' ' + fdd(tds[h - 1]) : '') : '지금'}</text>`);
     svg += '</svg>';
     const pr = k => Math.round(grp[k].length / A.length * 100);
     const CORE = e => /shock|call|fomc|exp/.test(e.k);  // 핵심 갈림길: 충격·월초 판정·FOMC·만기
@@ -402,6 +410,99 @@ setTimeout(() => {  // 월중 대응 카드가 그려진 뒤 실행
   }
   document.getElementById('scbtn').addEventListener('click', run);
 })();
+// ── 엘리어트 자동(보이는 구간) — 2026-11-22 사용자: 스크롤·확대로 구간을 바꿀 때마다 그 구간으로 다시 그림 ──
+// 규칙: 보이는 봉의 종가 지그재그(꺾임 7~13개가 되도록 문턱 자동) → 규칙(2파가 시작 아래로 X · 3파 최단 X · 4파가 1파와 겹침 X · 5파가 3파 넘김)을
+// 만족하는 5파 중 가장 큰 것을 찾고, 그 뒤 꺾임을 A·B·C로 표시. 마지막 봉은 '진행 중'. 해석 보조이며 확률·예측 점수에는 쓰지 않음
+let EW_ON = true;
+function ewZig(v, th) {
+  const p = [{i: 0, v: v[0]}]; let tr = 0, ei = 0, ev = v[0];
+  for (let i = 1; i < v.length; i++) {
+    const x = v[i];
+    if (tr >= 0) { if (x > ev) { ev = x; ei = i; } else if (x < ev * (1 - th)) { if (tr === 0 && ei === 0) { tr = -1; ev = x; ei = i; continue; } p.push({i: ei, v: ev}); tr = -1; ev = x; ei = i; continue; } }
+    if (tr < 0) { if (x < ev) { ev = x; ei = i; } else if (x > ev * (1 + th)) { p.push({i: ei, v: ev}); tr = 1; ev = x; ei = i; } }
+  }
+  if (p[p.length - 1].i !== ei) p.push({i: ei, v: ev, open: true});
+  // 첫 점과 둘째 점이 같은 방향이면 정리
+  return p.filter((q, k) => k === 0 || q.i !== p[k - 1].i);
+}
+function ewLabel(V) {
+  const v = V.map(c => c.c);
+  // 여러 문턱으로 꺾임을 만들고(6~20개), 각각에서 가장 큰 5파를 찾아 전체 최고를 고름
+  let BEST = null, Pfb = null;
+  for (const th of [0.4, 0.3, 0.24, 0.19, 0.15, 0.12, 0.1, 0.08, 0.065, 0.05, 0.04, 0.03, 0.022, 0.015]) {
+    const pz = ewZig(v, th); if (pz.length < 6) continue; if (pz.length > 20) break; if (!Pfb) Pfb = pz;
+    const r = ewSearch(pz); if (r && (!BEST || r.best.score > BEST.best.score * 1.05)) BEST = r;
+  }
+  if (!BEST) { const p = Pfb || ewZig(v, 0.05); const lab = p.slice(-4).map((q, k) => ({...q, t: 'abcd'[k] + (q.open ? '?' : ''), kind: 'cor'})); return {lab, txt: '보이는 구간에서 규칙에 맞는 5파가 없음 → 조정(a-b-c…) 구간이거나 구간을 넓혀야 함'}; }
+  return ewBuild(v, BEST.p, BEST.best);
+}
+function ewSearch(p) {
+  const n = p.length, val = p.map(q => q.v);
+  const ext = (a, b, isMax) => { let k = a; for (let j = a; j <= b; j++) if (isMax ? val[j] > val[k] : val[j] < val[k]) k = j; return k; };
+  // 작은 꺾임은 건너뛰고 i0<i1<…<i5를 고름: 각 점은 이웃 두 점 사이에서 극값 + 엘리어트 규칙
+  let best = null;
+  const rec = (sel, up) => {
+    const k = sel.length;
+    if (k === 6) {
+      const a = sel.map(i => val[i] * (up ? 1 : -1));
+      if (!(a[1] > a[0] && a[2] > a[0] && a[3] > a[1] && a[4] > a[1] && a[5] > a[3])) return;
+      const w1 = a[1] - a[0], w3 = a[3] - a[2], w5 = a[5] - a[4];
+      if (w3 < w1 && w3 < w5) return;
+      for (let t = 1; t < 5; t++) { if (ext(sel[t - 1], sel[t + 1], (t % 2 === 1) === up) !== sel[t]) return; }
+      if (ext(sel[0], sel[5], !up) !== sel[0] || ext(sel[0], sel[5], up) !== sel[5]) return;
+      const size = Math.abs(Math.log(val[sel[5]] / val[sel[0]])), score = size * (1 + 0.6 * p[sel[5]].i / Math.max(1, p[n - 1].i));
+      if (!best || score > best.score) best = {sel: sel.slice(), up, score};
+      return;
+    }
+    const last = sel[sel.length - 1];
+    for (let j = last + 1; j < n; j++) { const wantHigh = (k % 2 === 1) === up; if (k > 0 && (wantHigh ? val[j] <= val[last] : val[j] >= val[last])) continue; rec([...sel, j], up); }
+  };
+  for (let s0 = 0; s0 < n - 5; s0++) { rec([s0], true); rec([s0], false); }
+  return best ? {p, best} : null;
+}
+function ewBuild(v, p, best) {
+  const n = p.length, val = p.map(q => q.v);
+  const ext = (a, b, isMax) => { let k = a; for (let j = a; j <= b; j++) if (isMax ? val[j] > val[k] : val[j] < val[k]) k = j; return k; };
+  const lab = [];
+  {
+    const N1 = ['0', '①', '②', '③', '④', '⑤'], up = best.up, sel = best.sel;
+    sel.forEach((i, k) => lab.push({...p[i], t: N1[k], kind: 'imp'}));
+    const e5 = sel[5], cur = v[v.length - 1];
+    const restIdx = []; for (let j = e5 + 1; j < n; j++) restIdx.push(j);
+    let txt = '', cfib = [];
+    if (restIdx.length) {
+      // A-B-C: B = 조정 중 가장 크게 되돌린 점, A = 그 전 극값, C = 그 뒤 극값(또는 진행 중)
+      const isMaxB = up;
+      let bI = null;
+      if (restIdx.length >= 2) { bI = restIdx.slice(1).reduce((m, j) => (m == null || (isMaxB ? val[j] > val[m] : val[j] < val[m])) ? j : m, null); }
+      const aI = bI != null ? ext(e5 + 1, bI - 1 >= e5 + 1 ? bI - 1 : e5 + 1, !up) : ext(e5 + 1, n - 1, !up);
+      lab.push({...p[aI], t: 'A' + (p[aI].open ? '?' : ''), kind: 'cor'});
+      if (bI != null && bI > aI) {
+        lab.push({...p[bI], t: 'B' + (p[bI].open ? '?' : ''), kind: 'cor'});
+        if (bI < n - 1) { const cI = ext(bI + 1, n - 1, !up); lab.push({...p[cI], t: 'C' + (p[cI].open ? ' 진행' : ''), kind: 'cor'}); }
+        const A = val[aI], B = val[bI], P5 = val[e5];
+        cfib = [['C=0.618A', B - (P5 - A) * 0.618], ['C=A', B - (P5 - A)]];
+        txt = `${up ? '상승' : '하락'} 5파 끝 → A-B-C 조정${bI < n - 1 ? ' C파 진행/완료 확인 중' : ' B파 진행'}`;
+      } else txt = `${up ? '상승' : '하락'} 5파 끝 → A파 진행`;
+    } else txt = `${up ? '상승' : '하락'} 5파 진행 중(⑤ 연장 가능)`;
+    const p0 = val[sel[0]], p5 = val[e5];
+    const fl = restIdx.length ? [[0.382, p5 - (p5 - p0) * 0.382], [0.5, p5 - (p5 - p0) * 0.5], [0.618, p5 - (p5 - p0) * 0.618]] : [];
+    return {lab, txt, fl, cfib, cur, inv: up ? (restIdx.length ? val[sel[1]] : val[sel[0]]) : (restIdx.length ? val[sel[1]] : val[sel[0]]), invLab: restIdx.length ? '① 고점(조정이 넘으면 더 큰 조정)' : '시작점'};
+  }
+}
+function ewSvg(V, X, Y, lo, hi, L, Wd, R) {
+  if (!EW_ON || V.length < 20) return '';
+  const E = ewLabel(V); let g = '';
+  const imp = E.lab.filter(q => q.kind === 'imp'), cor = E.lab.filter(q => q.kind === 'cor');
+  const line = (arr, col) => arr.length > 1 ? `<polyline points="${arr.map(q => `${X(q.i).toFixed(1)},${Y(q.v).toFixed(1)}`).join(' ')}" fill="none" stroke="${col}" stroke-width="1.6" opacity=".85"/>` : '';
+  g += line(imp, '#3fa9f5') + line(imp.length ? [imp[imp.length - 1], ...cor] : cor, '#ff9f43');
+  E.lab.forEach((q, k) => { const prev = E.lab[k - 1], peak = prev ? q.v > prev.v : (E.lab[1] ? q.v > E.lab[1].v : false);
+    g += `<text x="${X(q.i)}" y="${Y(q.v) + (peak ? -8 : 17)}" font-size="13" font-weight="800" text-anchor="middle" fill="${q.kind === 'imp' ? '#3fa9f5' : '#ff9f43'}" stroke="var(--card)" stroke-width="3" paint-order="stroke">${q.t}</text>`; });
+  (E.fl || []).concat(E.cfib || []).forEach(([n, v]) => { if (v > lo && v < hi) g += `<line x1="${L}" x2="${Wd - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#c98500" stroke-width=".8" stroke-dasharray="4 4" opacity=".6"/><text x="${Wd - R - 2}" y="${Y(v) - 3}" font-size="10" text-anchor="end" fill="#c98500">${typeof n === 'number' ? n + ' 되돌림' : n} ${Math.round(v).toLocaleString()}</text>`; });
+  g += `<text x="${L + 4}" y="14" font-size="11.5" font-weight="700" fill="#3fa9f5">엘리어트(보이는 구간 자동): ${E.txt}${E.inv ? ` · 기준선(${E.invLab}) ${Math.round(E.inv).toLocaleString()}` : ''}</text>`;
+  return g;
+}
+
 // 차트: 일봉·주봉·월봉 전환 + 휠 확대·끌기 이동
 const tip = document.getElementById('tip');
 const MK = {up: ['▲', 'var(--up)', 'hi', '상승 예측'], down: ['▼', 'var(--down)', 'lo', '하락 예측'], flat: ['■', '#9aa0aa', 'lo', '판단불가'], bot: ['★', '#e0343a', 'lo', '보조 바닥'], top: ['✶', '#2f6fe0', 'hi', '보조 고점']};
@@ -455,6 +556,7 @@ function draw() {
       else { dn++; g += `<text x="${x}" y="${Y(c.l) + 12 + (dn - 1) * 11}" font-size="${fs}" text-anchor="middle" fill="${cc}" font-weight="700">${s}</text>`; } });
     if (i % step === 0) g += `<text x="${x}" y="${H - 7}" font-size="10" text-anchor="middle" fill="var(--sub)">${c.d0.slice(2, 4)}.${c.d0.slice(4, 6)}${TF === 'D' ? '.' + c.d0.slice(6) : ''}</text>`;
   });
+  g += ewSvg(V, X, Y, lo, hi, L, W, R);
   g += `<rect id="hov" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - Bt}" fill="transparent"/></svg>`;
   el.innerHTML = g;
   const hov = el.querySelector('#hov');
@@ -485,4 +587,5 @@ function draw() {
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
 })();
 setTF('D'); window.addEventListener('resize', draw);
+document.getElementById('ewbtn').onclick = e => { EW_ON = !EW_ON; e.currentTarget.querySelector('button').classList.toggle('on', EW_ON); draw(); };
 </script></body></html>
