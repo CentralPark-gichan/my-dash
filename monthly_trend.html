@@ -165,5 +165,5 @@ function draw() {
   const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) drag = null; };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
 })();
-setTF('M'); window.addEventListener('resize', draw);
+setTF('D'); window.addEventListener('resize', draw);
 </script></body></html>
