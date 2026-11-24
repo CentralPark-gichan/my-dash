@@ -25,6 +25,7 @@ details.card summary{cursor:pointer;font-size:16px;line-height:1.5}details.card 
 <div><span class="seg" id="tf"></span> <span class="seg" id="rng"></span></div></div>
 <div class="sub" style="margin:6px 0 2px">배경: 옅은 빨강 = 상승 예측 달 · 옅은 파랑 = 하락 예측 달 · 점선 = 새 달 시작</div><div class="sub" style="margin:0 0 4px">기호(눌러서 켜기/끄기): <span id="lg"></span></div><div class="sub" style="font-size:12px;margin-bottom:4px">휠·두 손가락 = 확대 · 끌기 = 이동</div>
 <div id="chart" style="touch-action:pan-y;cursor:grab"></div></div>
+<div class="card" id="combo" style="border-width:2px;border-color:#8b5cf6"></div>
 <div class="card" id="pred" style="border-width:2px"></div>
 <div class="card" id="scen"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between"><h2 style="margin:0" id="schd">월물 만기까지 시나리오</h2>
 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><label class="sub">오늘 밤·내일 시초 가정 변동 % <input id="scx" type="text" inputmode="decimal" placeholder="예: -7" style="width:80px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font:inherit"></label>
@@ -356,7 +357,7 @@ const HZ = ((J.scen || {}).hz) || 30;
         const stage = h <= aEnd ? `1차 공략(${down ? '▼' : '▲'})${wkD > 0 && h === wkD ? ' · W 만기' : ''}` : (h === HZ ? `3차 공략(${dirB ? '▼' : '▲'}) · 월물 만기` : `2차 공략(${dirB ? '▼' : '▲'})`);
         return {h, d: tds[h - 1], c, lo: c * (1 - 0.7 * v), hi: c * (1 + 0.7 * v), lw, uw, stage};
       }).filter(Boolean);
-      return {P: P.map(c => c / S0 - 1), rows, tA, tAv, tB, tBv, tBz, t2, t2v, down, dirB, longFut, wkD, aEnd, v};
+      return {P: P.map(c => c / S0 - 1), rows, puts, calls, tA, tAv, tB, tBv, tBz, t2, t2v, down, dirB, longFut, wkD, aEnd, v};
     })();
 
     // 가격 지도(차트·외국인 장부 · 엘리어트는 2026-11-22 제거) — 코스피 환산, 출발점(base) 대비 %
@@ -568,6 +569,40 @@ const HZ = ((J.scen || {}).hz) || 30;
       ${expertHTML()}
       <div class="sub" style="margin-top:8px">확률은 과거 비슷한 국면의 빈도일 뿐 예언이 아님 · 유사 국면 정의(60일 고점 대비 하락률·최근 5일 수익)는 미리 고정, 결과를 보고 고치지 않음 · 매크로·신호는 해석 문장으로만 반영(확률에 섞지 않음)</div>
       </details>`;
+    // 2026-11-24 사용자: 맨 위 결론 = 월중 대응(외국인 장부) × 옵션명가 포지션분석 결합
+    (() => {
+      const box = document.getElementById('combo'); if (!box) return;
+      const BR = J.brief || {}, bk = BR.book || {}, O_ = optPath;
+      if (!O_ || !BR.spot) { box.innerHTML = '<div class="sub">결합 결론 데이터 없음</div>'; return; }
+      const f = v => Math.round(v).toLocaleString(), dd = i => tds[i] ? fdd(tds[i]) : '';
+      const net = (bk.spot_eok || 0) + (bk.fut_notional_eok || 0), bookDn = net < 0;
+      const futK = bk.fut_avg && OP.ratio ? bk.fut_avg * OP.ratio : null;
+      const sw = [['현물 5일 순매수 전환', BR.spot.d5.z != null && BR.spot.d5.z >= 1], ['선물 평단 위 회복', !(bk.fut_avg && bk.S0 < bk.fut_avg)], ['풋 축소·콜 매수', BR.put.d5.z != null && BR.call.d5.z != null && BR.put.d5.z < 0 && BR.call.d5.z > 0]];
+      const nOk = sw.filter(x => x[1]).length;
+      const deep = O_.down ? O_.puts.filter(z => z.v < O_.tAv * 0.995 && z.v >= O_.tAv * 0.93 && /손익분기/.test(z.t))[0] : null;
+      const ceil = O_.tBz ? O_.tBz.hi : O_.tBv;
+      let mode, head;
+      if (O_.down && !O_.dirB && bookDn && nOk < 2) { mode = 'box'; head = `<b>박스형 ${f(deep ? deep.v : O_.tAv)} ~ ${f(ceil)}</b> — 먼저 흔들고 → 외국인 본전(${futK ? f(futK) : f(ceil)})까지 반등 → 만기 뒤 되밀림`; }
+      else if (!O_.dirB && nOk >= 2) { mode = 'up'; head = `<b class="up">상승 전환 쪽</b> — 전환 신호 ${nOk}/3 · ${f(ceil)} 돌파 가능`; }
+      else if (O_.dirB && bookDn) { mode = 'dn'; head = `<b class="down">하락 일치</b> — 옵션명가 2·3차 ▼ + 하락에 유리한 장부`; }
+      else { mode = 'mix'; head = `<b>혼조</b> — 옵션명가 ${O_.dirB ? '▼' : '▲'} · 장부 ${bookDn ? '하락 유리' : '상승 유리'} · 전환 신호 ${nOk}/3`; }
+      const wkEnd = O_.aEnd, last = HZ;
+      const rows = [
+        ['1차', `${dd(0)}~${dd(wkEnd - 1)}`, `<b class="${O_.down ? 'down' : 'up'}">${O_.down ? '▼' : '▲'} ${f(O_.tAv)}</b>${deep ? ` → 아래꼬리 ${f(deep.v)}` : ''}`, `옵션명가 1차(${O_.tA ? O_.tA.t : ''}) · 장부 ${bookDn ? '하락 유리(일치)' : '상승 유리'}`],
+        ['2차', `${dd(wkEnd)}~${dd(last - 2)}`, `<b class="${O_.dirB ? 'down' : 'up'}">${O_.dirB ? '▼' : '▲'} ${f(O_.t2v)}</b>${mode === 'box' ? ' <span class="sub">(매도용 반등)</span>' : ''}`, `${O_.longFut ? '외국인 선물 롱 손실 축소 동기' : '1차 연장'} · 전환 신호 ${nOk}/3`],
+        ['3차', `${dd(last - 1)} 만기`, `<b class="${O_.dirB ? 'down' : 'up'}">${O_.tBz ? f(O_.tBz.lo) + '~' + f(O_.tBz.hi) : f(O_.tBv)}</b>${mode === 'box' ? ' <span class="sub">= 천장 구역(돌파 아님)</span>' : ''}`, `${O_.tBz ? O_.tBz.t : ''}`],
+        ...(mode === 'box' ? [['만기 뒤', `${dd(last - 1)} 이후`, '<b class="down">▼ 되밀림</b>', '현물 분기 ' + (bk.spot_eok ? (bk.spot_eok / 10000).toFixed(1) + '조' : '') + ' · 하락장 분기 만기 뒤 5일 −2.3%(9회, 참고)']] : [])];
+      const chg = [
+        [`전환 신호 2/3 이상 (${sw.map(x => (x[1] ? '✅' : '⬜') + x[0]).join(' · ')})`, `${f(ceil)} 돌파 → 상승 추세 전환`],
+        ['월물 만기 외국인 선물 롤오버 유지 + 풋 정리', '만기 뒤 되밀림 약화'],
+        [`${f(deep ? deep.v : O_.tAv)} 아래 종가`, '2차 반등 무산 → 다음 개인 풋 손익분기로'],
+        ['반등 중 외국인 선물 순매도 전환', `2차 ${f(O_.t2v)}가 천장`]];
+      box.innerHTML = `<h2 style="margin:0">종합 결론 — 옵션명가 포지션분석 × 외국인 장부</h2>
+        <div style="margin:8px 0;font-size:16px;line-height:1.7">${head}</div>
+        <div class="scroll"><table><tr><th>구간</th><th>날짜</th><th>예상</th><th style="text-align:left">근거</th></tr>${rows.map(r => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td style="text-align:left;white-space:normal">${r[3]}</td></tr>`).join('')}</table></div>
+        <div class="scroll" style="margin-top:6px"><table><tr><th style="text-align:left">이렇게 되면</th><th style="text-align:left">결론 변경</th></tr>${chg.map(r => `<tr><td style="text-align:left;white-space:normal">${r[0]}</td><td style="text-align:left;white-space:normal">${r[1]}</td></tr>`).join('')}</table></div>
+        <div class="sub">출발 ${f(base)} · 철칙 + 검증 규칙을 합친 가설, 매일 다시 계산 · 자세한 근거는 아래 '월물 만기까지 시나리오'와 '월중 대응'</div>`;
+    })();
   }
   document.getElementById('scbtn').addEventListener('click', run);
   try { run(); } catch (e) { console.error(e); }  // 2026-11-24 사용자: 두괄식 — 열자마자 결론이 보이게 자동 생성
