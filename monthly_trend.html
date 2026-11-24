@@ -29,10 +29,10 @@ details.card summary{cursor:pointer;font-size:16px;line-height:1.5}details.card 
 <div class="card" id="scen"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between"><h2 style="margin:0" id="schd">월물 만기까지 시나리오</h2>
 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><label class="sub">오늘 밤·내일 시초 가정 변동 % <input id="scx" type="text" inputmode="decimal" placeholder="예: -7" style="width:80px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font:inherit"></label>
 <button id="scbtn" style="background:#4f46e5;color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:700;cursor:pointer">월물 만기까지 시나리오 생성</button></div></div>
-<div class="sub" style="margin-top:4px">옵션명가 포지션분석(철칙: 3주체 → 개인 일방 쏠림 반대 = 1차 공략 → 개인 매도 손익분기 → 만기) · 이번 달 신호 · 매크로 일정 · 과거 비슷한 국면(1999~, 그날까지 정보만)을 묶어 <b>다음 월물 만기일까지</b> 그립니다. 야간선물 변동을 넣으면 그만큼 움직인 상태에서 다시 계산합니다.</div>
+<div class="sub" style="margin-top:4px">옵션명가 포지션분석(철칙)으로 <b>다음 월물 만기일까지</b> 1·2·3차 공략 경로를 그립니다 · 야간선물 변동 %를 넣으면 그 상태에서 다시 계산</div>
 <div id="scout"></div></div>
 <div class="card" id="today"></div>
-<details class="card" open><summary><b>근거</b> <span class="sub">— 판단 순서와 검증</span></summary>
+<details class="card"><summary><b>근거</b> <span class="sub">— 판단 순서와 검증</span></summary>
 <div class="step"><i>①</i><div><b>방향 (가장 중요)</b><br><span class="sub">월초 첫 거래일 외국인·개인 현물 순매수 ÷ 직전 20일 평균 KOSPI 거래대금 → 직전 500거래일 대비 z. 외국인 z≥+1 또는 개인 z≤−1 = ▲, 개인 z≥+1 = ▼, 그 외 ■. 그날 종가에 확정.</span></div></div>
 <div class="step"><i>②</i><div><b>확신·비중</b><br><span class="sub">셋째 날 3일 누적이 같은 기준으로 여전히 강하면 유지·추가, 그저 그러면 비중 축소. '첫날+3일 둘 다 강함'은 정의 4개·두 구간 모두에서 가장 견고(월봉 높게 81~93%).</span></div></div>
 <div class="step"><i>③</i><div><b>확인</b><br><span class="sub">시장 추세 페이지 ★최종 바닥(+1)·고점(−1) 신호(첫 거래일까지 최근 20거래일).</span></div></div>
@@ -418,9 +418,9 @@ const HZ = ((J.scen || {}).hz) || 30;
         <div><b>${e.no} ${fdd(e.d)}${e.D ? ` · D+${e.D}` : ' · 지나감'}</b> — <b>${e.e}</b>${e.ok ? '' : ' <span class="sub" style="display:inline">(날짜 확인 필요)</span>'}${e.res ? ` <b class="${resK(e) === 'up' ? 'up' : resK(e) === 'dn' ? 'down' : ''}">→ 결과: ${(e.res.split('|')[1] || e.res)}</b>` : ''}</div>
         ${e.n ? `<div class="sub">${e.n}</div>` : ''}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px;margin-top:6px;font-size:13.5px;line-height:1.5">
-          ${e.up ? `<div style="border-left:3px solid var(--up);padding-left:8px"><b class="up">반등 쪽</b><br>${e.up}${!e.past && e.D && sp.up ? `<br><span class="sub">그날 경로 약 ${lvl(sp.up[e.D])}</span>` : ''}</div>` : ''}
-          ${e.box ? `<div style="border-left:3px solid #9aa0aa;padding-left:8px"><b>박스 쪽</b><br>${e.box}${!e.past && e.D && sp.box ? `<br><span class="sub">그날 경로 약 ${lvl(sp.box[e.D])}</span>` : ''}</div>` : ''}
-          ${e.dn ? `<div style="border-left:3px solid var(--down);padding-left:8px"><b class="down">하락 쪽</b><br>${e.dn}${!e.past && e.D && sp.dn ? `<br><span class="sub">그날 경로 약 ${lvl(sp.dn[e.D])}</span>` : ''}</div>` : ''}
+          ${e.up ? `<div style="border-left:3px solid var(--up);padding-left:8px"><b class="up">반등 쪽</b><br>${e.up}</div>` : ''}
+          ${e.box ? `<div style="border-left:3px solid #9aa0aa;padding-left:8px"><b>박스 쪽</b><br>${e.box}</div>` : ''}
+          ${e.dn ? `<div style="border-left:3px solid var(--down);padding-left:8px"><b class="down">하락 쪽</b><br>${e.dn}</div>` : ''}
         </div>
         ${e.ev ? `<div class="sub" style="margin-top:6px">📊 과거 근거: ${e.ev}</div>` : ''}</div>`;
     const minor = keyEv.filter(e => !CORE(e));
@@ -522,9 +522,8 @@ const HZ = ((J.scen || {}).hz) || 30;
         return `<tr${isNear ? ' style="background:var(--upbg)"' : ''}><td><b class="${z.r < 0 ? 'up' : 'down'}">${z.r < 0 ? '지지' : '저항'}</b></td><td>${Math.round(z.hi) === Math.round(z.lo) ? Math.round(z.mid) : Math.round(z.lo) + '~' + Math.round(z.hi)}</td><td>${Math.round(z.k).toLocaleString()}</td><td>${pct(z.r * 100)}</td><td>${'★'.repeat(Math.min(z.n, 4))}</td>
           <td style="text-align:left;white-space:normal">${z.items.map(i => `<span style="color:${gc(i.grp)}">●</span> ${i.src}`).join('<br>')}</td></tr>`;
       }).join('');
-      return `<div style="margin-top:12px"><b>가격 지도 — 차트·외국인 장부가 말하는 지지·저항</b> <span class="sub" style="display:inline">(KOSPI200 기준 계산 → 코스피 환산 · ★ = 겹친 근거 수 · 1.5% 안은 한 구간)</span>
+      return `<div style="margin-top:12px"><b>가격 지도 — 차트·외국인 장부 지지·저항</b> <span class="sub" style="display:inline">(KOSPI200 기준 계산 → 코스피 환산 · ★ = 겹친 근거 수 · 1.5% 안은 한 구간)</span>
         <div class="step"><i style="background:#f2c94c;color:#111">차</i><div><b>차트</b><br><span class="sub">20일선 ${Math.round(CH.ma20)}(코스피 ${kv(CH.ma20)}) · 60일선 ${Math.round(CH.ma60)} · 120일선 ${Math.round(CH.ma120)} · 지금 ${Math.round(LV.S0)} → ${LV.S0 < CH.ma20 && CH.ma20 < CH.ma60 && CH.ma60 < CH.ma120 ? '<b class="down">역배열(하락 추세)</b>' : LV.S0 > CH.ma20 && CH.ma20 > CH.ma60 ? '<b class="up">정배열 쪽</b>' : '혼조'} · RSI ${CH.rsi}${CH.div ? '<br><b style="color:var(--fg)">' + CH.div + '</b>' : ''}</span></div></div>
-        <div class="step"><i style="background:#e0343a">외</i><div><b>외국인 장부</b><br><span class="sub">${BK.fut_avg ? `선물 분기 롱 ${(BK.fut_ct || 0).toLocaleString()}계약 평단 ${BK.fut_avg}(코스피 ${kv(BK.fut_avg)}) — 반등 때 본전 매도 자리` : ''}${(BK.be || []).length ? ` · 파생 만기 손익분기 ${BK.be.join(', ')}` : ''}${BK.spot_eok ? ` · 현물 분기 ${(BK.spot_eok / 10000).toFixed(1)}조` : ''}</span></div></div>
         <div class="scroll"><table><tr><th></th><th>KOSPI200</th><th>코스피</th><th>출발점 대비</th><th>강도</th><th style="text-align:left">근거</th></tr>${rows}</table></div>
         <div class="sub">가장 가까운 지지·저항은 강조 · 그림의 점선 = 가까운 지지(빨강)·저항(파랑) · 가격 지도는 '어디서 멈추고 튀나'를 보는 해석이며 확률에는 넣지 않음 · 사용자 추세선은 data/elliott_count.json(user_levels)에서 수동 갱신</div></div>`;
     }
@@ -537,31 +536,31 @@ const HZ = ((J.scen || {}).hz) || 30;
     }).filter(r => !/위클리/.test(r)).join('');
     out.innerHTML = `
       <div style="margin:12px 0 2px"><b>출발점</b> <span class="sub">${D[t] === '가정' ? `${fd(D[t - 1])} 종가에서 ${pct(x)} 가정 → 코스피 약 ${lvl(0)}` : `${fd(D[t])} 종가 ${lvl(0)}`} · 60일 고점 대비 ${pct(now.dd * 100)} · 최근 5일 ${pct(now.r5 * 100)}</span></div>
+      ${optPath ? (() => { const O_ = optPath, f = v => Math.round(v).toLocaleString(); const last = O_.rows[O_.rows.length - 1];
+        return `<div style="margin:10px 0;padding:10px 12px;border:2px solid #8b5cf6;border-radius:10px;font-size:15px;line-height:1.8"><b>결론</b> — 12/10 만기 예상 <b>${f(last.c)}</b> (출발 ${f(base)} 대비 ${pct((last.c / base - 1) * 100)})<br>
+          <b class="${O_.down ? 'down' : 'up'}">1차 ${O_.down ? '▼' : '▲'} ${f(O_.tAv)}</b> (~${O_.wkD ? 'W 만기' : 'D+' + O_.aEnd}) → <b class="${O_.dirB ? 'down' : 'up'}">2차 ${O_.dirB ? '▼' : '▲'} ${f(O_.t2v)}</b> → <b class="${O_.dirB ? 'down' : 'up'}">3차 ${O_.dirB ? '▼' : '▲'} ${O_.tBz ? f(O_.tBz.lo) + '~' + f(O_.tBz.hi) : f(O_.tBv)}</b> (월물 만기)<br>
+          <span class="sub">근거는 아래 순서: 단계표 → 날짜별 경로 → 3주체 포지션 → 가격 지도 → 일정 갈림길</span></div>`; })() : ''}
+      ${dayHTML()}
+      ${opHTML()}
+      ${mapHTML()}
+      <div style="margin-top:12px"><b>갈림길 지도 — 일정별 반등·박스·하락 조건</b> <span class="sub" style="display:inline">(번호 = 참고 그림의 주황 점선)</span>
+      ${tally.up + tally.box + tally.dn ? `<div style="margin:4px 0">지나간 갈림길 결과: <b class="up">반등 쪽 ${tally.up}</b> · <b>박스 ${tally.box}</b> · <b class="down">하락 쪽 ${tally.dn}</b> <span class="sub" style="display:inline">(확률에는 섞지 않고 방향 확인용)</span></div>` : ''}
+      ${roadmap}
+      <div class="sub">결과는 data/macro_calendar.csv의 result 칸에 'up|내용'·'box|내용'·'dn|내용'으로 적으면 표시(월초 첫날 판정은 자동) · 위클리 만기(매주 월·목)는 그림에만 옅게 · 매크로 조건은 해석 문장이며 확률 계산에는 넣지 않음</div></div>
+      <details style="margin-top:12px"><summary class="sub" style="cursor:pointer"><b>참고</b> — 과거 비슷한 국면 통계(옵션 포지션 미반영) · 6개월 차트 · 전문가 시각</summary>
       <div class="sub">비슷했던 날 ${A.length}회(1999~${tol > 1 ? `, 범위 ${tol.toFixed(2)}배로 넓힘` : ''}) 그 뒤 ${HZ}거래일 · 띠 = 가운데 50%(진한)·80%(옅은) · 선 = 시나리오별 중앙 경로 · 주황 점선 = 큰 일정</div>
       ${svg}
-      ${opHTML()}
-      ${dayHTML()}
-      <details style="margin-top:10px"><summary class="sub" style="cursor:pointer">참고: 과거 비슷한 국면 통계 시나리오(옵션 포지션 미반영, 회색 점선)</summary>${scTable()}</details>
+      ${scTable()}
       <div class="scroll" style="margin-top:8px"><table><tr><th>보유</th><th>평균</th><th>오른 비율</th><th>가운데 50%</th><th>2010~만</th><th>2026년만</th></tr>
       ${H.map(h => { const a = stat(A, h), b = sub10.length ? stat(sub10, h) : null, c = sub26.length ? stat(sub26, h) : null;
         return `<tr><td>${h}일</td><td class="${a.m > 0 ? 'up' : 'down'}">${pct(a.m * 100)}</td><td>${Math.round(a.up * 100)}%</td><td>${pct(a.q1 * 100)} ~ ${pct(a.q3 * 100)}</td><td>${b ? pct(b.m * 100) + ' · ' + Math.round(b.up * 100) + '% (' + sub10.length + ')' : '–'}</td><td>${c ? pct(c.m * 100) + ' · ' + Math.round(c.up * 100) + '% (' + sub26.length + ')' : '–'}</td></tr>`; }).join('')}
       <tr><td>${HZ}일 안 최저</td><td colspan="5" style="text-align:left;white-space:normal">중앙 ${pct(q(mins, .5) * 100)} · 나쁜 25% ${pct(q(mins, .25) * 100)} (코스피 약 ${lvl(q(mins, .25))}) — 반등하더라도 중간에 한 번 더 흔들리는 경우가 많음</td></tr></table></div>
       ${expertHTML()}
-      ${mapHTML()}
-      <div style="margin-top:12px"><b>이번 달 신호</b><ul style="margin:4px 0;padding-left:20px;line-height:1.7">
-        <li>월초 판정 <b>${callTxt[String(N.call)] ?? '–'}</b> · 최종 예측 점수 ${N.P ?? '–'} <span class="sub">— 방향은 월초 외국인 현물이 정함, 다음 판정 12/1 첫날</span></li>
-        ${T.reg ? `<li>현물 국면 <b>${T.reg}</b> · 이번 달 ${T.mtd != null ? pct(T.mtd) : ''} ${T.fallen ? '<b class="down">(이미 많이 하락)</b>' : ''}</li>` : ''}
-        ${putLine ? `<li>${putLine} → <b>방향 신호 아님(보험)</b> · 이미 많이 빠진 달의 풋은 막바지 공포 보험일 수 있음 — 며칠 더 흔들린 뒤 20일 회복 경향(표본 작음, 참고)</li>` : ''}
-        ${sigs.join('') || '<li class="sub">이번 달 켜진 보조 바닥·고점 신호 없음</li>'}
-        ${J.cand && J.cand.now ? `<li class="sub">🧪 ${J.cand.now}</li>` : ''}
-      </ul></div>
-      <div style="margin-top:12px"><b>갈림길 지도 — 일정마다 결과에 따라 어느 시나리오로 가나</b> <span class="sub" style="display:inline">(번호 = 그림의 주황 점선 · '그날 경로' = 각 시나리오 중앙 경로에서 그날 코스피)</span>
-      ${tally.up + tally.box + tally.dn ? `<div style="margin:4px 0">지나간 갈림길 결과: <b class="up">반등 쪽 ${tally.up}</b> · <b>박스 ${tally.box}</b> · <b class="down">하락 쪽 ${tally.dn}</b> <span class="sub" style="display:inline">(확률에는 섞지 않고 방향 확인용)</span></div>` : ''}
-      ${roadmap}
-      <div class="sub">결과는 data/macro_calendar.csv의 result 칸에 'up|내용'·'box|내용'·'dn|내용'으로 적으면 표시(월초 첫날 판정은 자동) · 위클리 만기(매주 월·목)는 그림에만 옅게 · 매크로 조건은 해석 문장이며 확률 계산에는 넣지 않음</div></div>
-      <div class="sub" style="margin-top:8px">확률은 과거 비슷한 국면의 빈도일 뿐 예언이 아님 · 유사 국면 정의(60일 고점 대비 하락률·최근 5일 수익)는 미리 고정, 결과를 보고 고치지 않음 · 매크로·신호는 해석 문장으로만 반영(확률에 섞지 않음)</div>`;
+      <div class="sub" style="margin-top:8px">확률은 과거 비슷한 국면의 빈도일 뿐 예언이 아님 · 유사 국면 정의(60일 고점 대비 하락률·최근 5일 수익)는 미리 고정, 결과를 보고 고치지 않음 · 매크로·신호는 해석 문장으로만 반영(확률에 섞지 않음)</div>
+      </details>`;
   }
   document.getElementById('scbtn').addEventListener('click', run);
+  try { run(); } catch (e) { console.error(e); }  // 2026-11-24 사용자: 두괄식 — 열자마자 결론이 보이게 자동 생성
 })();
 // 차트: 일봉·주봉·월봉 전환 + 휠 확대·끌기 이동
 const tip = document.getElementById('tip');
