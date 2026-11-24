@@ -270,7 +270,7 @@ const HZ = ((J.scen || {}).hz) || 30;
       tol *= 1.5;
     }
     if (!A.length) { out.innerHTML = '<div class="sub">비슷한 과거 국면이 없습니다</div>'; return; }
-    const H = [3, 5, 10, 20, HZ];
+    const H = [...new Set([3, 5, 10, 20, HZ].filter(h => h <= HZ))];
     const fw = (i, h) => C[i + h] / C[i] - 1;
     const path = i => Array.from({length: HZ + 1}, (_, h) => C[i + h] / C[i] - 1);
     const grp = {up: A.filter(i => fw(i, HZ) > 0.03), box: A.filter(i => Math.abs(fw(i, HZ)) <= 0.03), dn: A.filter(i => fw(i, HZ) < -0.03)};
@@ -369,17 +369,73 @@ const HZ = ((J.scen || {}).hz) || 30;
     const roadmap = keyEv.filter(CORE).map(card).join('') + (minor.length ? `<details style="margin-top:6px"><summary class="sub" style="cursor:pointer">그 밖의 일정 ${minor.length}개 (${minor.map(e => e.no + ' ' + e.e.replace(/\(.*?\)/, '').slice(0, 10)).join(' · ')})</summary>${minor.map(card).join('')}</details>` : '');
     const zl = z => `${Math.round(z.k).toLocaleString()}(${pct(z.r * 100)}, ${z.items.map(i => i.src.replace(/\(.*?\)/g, '')).slice(0, 2).join('·')}${z.n > 2 ? ' 외' : ''})`;
     const N = J.now || {}, T = J.today || {};
+    function scTable() {
+      // 2026-11-24 사용자: '글로 쓰지 말고 표로' — 시나리오 3개를 한 표로
+      const HS = [...new Set([3, 5, 10, HZ].filter(h => h <= HZ))];
+      const R_ = [['up', '반등', `+3%↑`, 'var(--up)', resZ.slice(0, 2).map(z => Math.round(z.k).toLocaleString()).join(' → ') || '–'],
+                  ['box', '박스', '±3% 안', '#9aa0aa', '–'],
+                  ['dn', '추가 하락', '−3%↓', 'var(--down)', supZ.slice(0, 3).map(z => Math.round(z.k).toLocaleString()).join(' → ') || '–']];
+      const cpT = k => keyEv.filter(e => e[k] && CORE(e) && !e.past).slice(0, 3).map(e => `${e.no}${fdd(e.d)} ${e[k]}`).join('<br>') || '–';
+      return `<div class="scroll" style="margin-top:10px"><table><tr><th>시나리오(${HZ}일 뒤)</th><th>비율</th><th>횟수</th>${HS.map(h => `<th>D+${h}${tds[h - 1] ? ' ' + fdd(tds[h - 1]) : ''}</th>`).join('')}<th>만기 코스피</th><th>도중 최저</th><th style="text-align:left">가는 레벨</th><th style="text-align:left">핵심 갈림길 (이 시나리오 조건)</th></tr>
+        ${R_.filter(r => grp[r[0]].length).map(([k, nm, def, c, lv]) => { const m = sp[k];
+          return `<tr><td><b style="color:${c}">${nm}</b> <span class="sub" style="display:inline">${def}</span></td><td><b>${pr(k)}%</b></td><td>${grp[k].length}</td>${HS.map(h => `<td class="${m[h] > 0 ? 'up' : 'down'}">${pct(m[h] * 100)}</td>`).join('')}
+            <td><b>${lvl(m[HZ])}</b></td><td>${pct(Math.min(...m) * 100)}</td><td style="text-align:left">${lv}</td><td style="text-align:left;white-space:normal;min-width:260px;font-size:12.5px">${cpT(k)}</td></tr>`; }).join('')}
+      </table></div><div class="sub">수익률·코스피 = 각 시나리오 중앙 경로 · 비율 = 과거 비슷한 국면 ${A.length}회 중 빈도(예언 아님) · 가는 레벨 = 가격 지도 지지·저항</div>`;
+    }
+    function dayHTML() {
+      // 2026-11-24 사용자: 날짜별 코스피 가능 수치 표 + 차트 — 과거 유사 국면(위 띠와 같은 표본)의 날짜별 분포를 코스피로 환산
+      const OS_ = (OP.series || [])[0], WK_ = (OP.series || [])[1];
+      const rows = [];
+      for (let h = 1; h <= HZ; h++) {
+        const v = col(h);
+        rows.push({h, d: tds[h - 1], q10: base * (1 + q(v, .1)), q25: base * (1 + q(v, .25)), q50: base * (1 + q(v, .5)), q75: base * (1 + q(v, .75)), q90: base * (1 + q(v, .9))});
+      }
+      const evOf = d => (S.ev || []).filter(e => e.d === d).map(e => e.e.replace(/\(.*?\)/, '')).join(' · ');
+      const lvls = [];
+      if (OS_) { OS_.puts.slice(0, 3).forEach(z => lvls.push([z.be, '개인 풋매도 BE ' + z.strike + 'P', 'var(--down)'])); OS_.calls.slice(0, 3).forEach(z => lvls.push([z.be, '개인 콜매도 BE ' + z.strike + 'C', 'var(--up)'])); }
+      const W2 = 900, H2 = 300, L2 = 56, R2 = 120;
+      const all = rows.flatMap(r => [r.q10, r.q90]).concat([base]);
+      let lo2 = Math.min(...all), hi2 = Math.max(...all);
+      const pad = (hi2 - lo2) * 0.08; lo2 -= pad; hi2 += pad;
+      const vis = lvls.filter(l => l[0] >= lo2 && l[0] <= hi2);
+      const X2 = h => L2 + (h - 0.5) / HZ * (W2 - L2 - R2), Y2 = v => 10 + (hi2 - v) / (hi2 - lo2) * (H2 - 40), bw = Math.max(6, (W2 - L2 - R2) / HZ * 0.5);
+      let g = `<svg viewBox="0 0 ${W2} ${H2}" style="width:100%;height:auto;max-height:360px;margin-top:6px">`;
+      for (let j = 0; j <= 4; j++) { const v = lo2 + (hi2 - lo2) * j / 4; g += `<line x1="${L2}" x2="${W2 - R2}" y1="${Y2(v)}" y2="${Y2(v)}" stroke="var(--line)" stroke-width=".5"/><text x="2" y="${Y2(v) + 4}" font-size="10.5" fill="var(--sub)">${Math.round(v).toLocaleString()}</text>`; }
+      g += `<line x1="${L2}" x2="${W2 - R2}" y1="${Y2(base)}" y2="${Y2(base)}" stroke="var(--sub)" stroke-dasharray="3 3"/><text x="${W2 - R2 + 4}" y="${Y2(base) + 4}" font-size="10.5" fill="var(--sub)">출발 ${Math.round(base).toLocaleString()}</text>`;
+      vis.forEach(l => { g += `<line x1="${L2}" x2="${W2 - R2}" y1="${Y2(l[0])}" y2="${Y2(l[0])}" stroke="#8b5cf6" stroke-dasharray="2 3" opacity=".8"/><text x="${W2 - R2 + 4}" y="${Y2(l[0]) + 4}" font-size="10" fill="#8b5cf6">${l[1]} ${Math.round(l[0]).toLocaleString()}</text>`; });
+      rows.forEach(r => {
+        const x = X2(r.h), e_ = evOf(r.d);
+        if (/만기|FOMC|CPI|고용/.test(e_)) g += `<line x1="${x}" x2="${x}" y1="10" y2="${H2 - 30}" stroke="#c98500" stroke-dasharray="2 3" opacity=".7"/>`;
+        g += `<line x1="${x}" x2="${x}" y1="${Y2(r.q90)}" y2="${Y2(r.q10)}" stroke="var(--sub)" stroke-width="1.2"/>
+          <rect x="${x - bw / 2}" y="${Y2(r.q75)}" width="${bw}" height="${Math.max(1, Y2(r.q25) - Y2(r.q75))}" fill="#4f46e5" opacity=".35" rx="2"/>
+          <circle cx="${x}" cy="${Y2(r.q50)}" r="3" fill="#4f46e5"/>`;
+        if (HZ <= 15 || r.h % 2 === 1 || r.h === HZ) g += `<text x="${x}" y="${H2 - 16}" font-size="10" text-anchor="middle" fill="var(--sub)">${r.d ? fdd(r.d) : 'D+' + r.h}</text>`;
+      });
+      g += `<text x="${L2}" y="${H2 - 2}" font-size="10" fill="var(--sub)">막대 = 가운데 50% · 선 = 80% · 점 = 중앙 · 주황 점선 = 만기·큰 일정 · 보라 = 월물 개인 매도 손익분기</text></svg>`;
+      const near_ = v => { const hit = lvls.filter(l => Math.abs(l[0] - v) / v < 0.01); return hit.length ? ' <span style="color:#8b5cf6">◆</span>' : ''; };
+      const tr = rows.map(r => {
+        const e_ = evOf(r.d), big = /만기|FOMC|CPI|고용/.test(e_);
+        return `<tr${big ? ' style="background:var(--upbg)"' : ''}><td>${r.d ? fdd(r.d) : '–'} <span class="sub" style="display:inline">D+${r.h}</span></td>
+          <td class="down">${Math.round(r.q10).toLocaleString()}${near_(r.q10)}</td><td>${Math.round(r.q25).toLocaleString()}</td><td><b>${Math.round(r.q50).toLocaleString()}</b></td><td>${Math.round(r.q75).toLocaleString()}</td><td class="up">${Math.round(r.q90).toLocaleString()}${near_(r.q90)}</td>
+          <td style="text-align:left;white-space:normal;min-width:220px;font-size:12.5px">${e_ || ''}</td></tr>`;
+      }).join('');
+      return `<div style="margin-top:12px"><b>날짜별 코스피 가능 범위</b> <span class="sub" style="display:inline">(과거 비슷한 국면 ${A.length}회의 날짜별 분포를 출발점 ${Math.round(base).toLocaleString()}에 적용 · 확률이 아니라 과거 빈도 · ${WK_ ? WK_.ser.slice(2) + ' 위클리 만기 ' + fdd(WK_.exp) + ' · ' : ''}월물 만기 ${fdd(S.exp || '')})</span>
+        ${g}
+        <div class="scroll" style="margin-top:6px"><table><tr><th>날짜</th><th>하단(10%)</th><th>아래(25%)</th><th>중앙</th><th>위(75%)</th><th>상단(90%)</th><th style="text-align:left">일정</th></tr>${tr}</table></div>
+        <div class="sub">◆ = 그 값이 월물 개인 매도 손익분기 1% 안(공략·가속 구간) · 야간선물 변동 칸에 값을 넣으면 출발점을 옮겨 다시 계산</div></div>`;
+    }
     function opHTML() {
+      // 2026-11-24 사용자: 표로 — 옵션명가 포지션분석
       if (!(OP.series || []).length) return S.opt_err ? `<div class="sub">옵션명가 포지션분석 실패: ${S.opt_err}</div>` : '';
-      const nm = {i: '개인', f: '외국인', fi: '금투'};
-      const lvT = (a, kind) => a.length ? a.map(z => `${z.strike}${z.cp} <span class="sub" style="display:inline">(코스피 ${z.k.toLocaleString()} · 개인 ${z.net} · 손익분기</span> <b>${z.be.toLocaleString()}</b><span class="sub" style="display:inline">)</span>`).join(' · ') : '<span class="sub">없음</span>';
-      return `<div style="margin:12px 0;border:2px solid #8b5cf6;border-radius:10px;padding:10px 12px"><b style="color:#8b5cf6">옵션명가 포지션분석</b> <span class="sub" style="display:inline">(${fd(OP.date)} 기준 · 코스피 ${(+OP.kospi).toLocaleString()} · 철칙: 3주체 → 개인 일방 쏠림의 반대 = 1차 공략 → 개인 매도(손실 한도 없음) 손익분기 → 만기 단계)</span>
-        ${OP.series.map(x => `<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:6px"><b>${SERN(x.ser)}</b> <span class="sub" style="display:inline">만기 ${x.exp ? fdd(x.exp) : '–'} · 남은 ${x.nd ?? '–'}거래일${x.anchor ? ' · 0794 시작점 ' + fdd(x.anchor) : ''}</span>
-          <div style="margin-top:2px">옵션 순델타(선물 계약 환산): ${Object.entries(x.dl).map(([k, v]) => `${nm[k]} <b class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${v > 0 ? '+' : ''}${v.toLocaleString()}</b>`).join(' · ')}</div>
-          <div>→ <b class="${x.side === 'down' ? 'down' : 'up'}">1차 공략 = ${x.side === 'down' ? '아래' : '위'}</b> <span class="sub" style="display:inline">(${x.why} · 손실 파이 풋 매도 ${x.pie_p}억 / 콜 매도 ${x.pie_c}억)</span></div>
-          <div style="font-size:13.5px;margin-top:2px"><b class="down">아래</b> 개인 풋 매도: ${lvT(x.puts)}</div>
-          <div style="font-size:13.5px"><b class="up">위</b> 개인 콜 매도: ${lvT(x.calls)}</div></div>`).join('')}
-        <div class="sub" style="margin-top:6px">그림의 보라 점선 = 월물 개인 매도 손익분기 · 행사가별 주체 포지션은 추정치(0794 시작점 + 자체 배분 + 0789 위클리 보정) · 경로는 철칙을 적용한 가설(검증은 데이터 3~6개월 누적 뒤) · 매일 자동 공략 보고서와 같은 계산</div></div>`;
+      const dv = v => `<b class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${v > 0 ? '+' : ''}${v.toLocaleString()}</b>`;
+      const lvT = a => a.slice(0, 3).map(z => `${z.strike}${z.cp} ${z.net} → <b>${z.be.toLocaleString()}</b>`).join('<br>') || '–';
+      return `<div style="margin:12px 0;border:2px solid #8b5cf6;border-radius:10px;padding:10px 12px"><b style="color:#8b5cf6">옵션명가 포지션분석</b> <span class="sub" style="display:inline">${fd(OP.date)} 기준 · 코스피 ${(+OP.kospi).toLocaleString()}</span>
+        <div class="scroll" style="margin-top:6px"><table><tr><th>시리즈</th><th>만기</th><th>남은 일</th><th>개인 Δ</th><th>외국인 Δ</th><th>금투 Δ</th><th>1차 공략</th><th>근거</th><th style="text-align:left">개인 풋매도 (계약 → 손익분기 코스피)</th><th style="text-align:left">개인 콜매도 (계약 → 손익분기 코스피)</th></tr>
+          ${OP.series.map(x => `<tr><td><b>${SERN(x.ser)}</b></td><td>${x.exp ? fdd(x.exp) : '–'}</td><td>${x.nd ?? '–'}</td><td>${dv(x.dl.i)}</td><td>${dv(x.dl.f)}</td><td>${dv(x.dl.fi)}</td>
+            <td><b class="${x.side === 'down' ? 'down' : 'up'}">${x.side === 'down' ? '▼ 아래' : '▲ 위'}</b></td><td>${/철칙 5/.test(x.why) ? '개인 일방 쏠림(철칙5)' : '손실 파이(철칙6)'}</td>
+            <td style="text-align:left;font-size:12.5px">${lvT(x.puts)}</td><td style="text-align:left;font-size:12.5px">${lvT(x.calls)}</td></tr>`).join('')}
+        </table></div>
+        <div class="sub">Δ = 옵션 순델타(선물 계약 환산) · 보라 점선 = 월물 개인 매도 손익분기 · 주체 포지션은 추정치(0794 시작점 + 자체 배분 + 0789 보정) · 경로는 철칙 적용 가설</div></div>`;
     }
     function expertHTML() {
       const EX = S.experts || []; if (!EX.length) return '';
@@ -422,9 +478,8 @@ const HZ = ((J.scen || {}).hz) || 30;
       <div class="sub">비슷했던 날 ${A.length}회(1999~${tol > 1 ? `, 범위 ${tol.toFixed(2)}배로 넓힘` : ''}) 그 뒤 ${HZ}거래일 · 띠 = 가운데 50%(진한)·80%(옅은) · 선 = 시나리오별 중앙 경로 · 주황 점선 = 큰 일정</div>
       ${svg}
       ${opHTML()}
-      ${scCard('up', `반등 (${HZ}일 뒤 +3% 넘게)`, 'var(--up)', '급락 뒤 3~5일 기술적 반등이 가장 흔함 · 이어지려면 월초 첫날 외국인 현물 재유입·바닥 신호 확인 필요' + (resZ[0] ? ` · 1차 저항 ${zl(resZ[0])}` + (resZ[1] ? ` → 2차 ${zl(resZ[1])}` : '') : ''))}
-      ${scCard('box', `박스 (${HZ}일 뒤 ±3% 안)`, '#9aa0aa', '반등 뒤 되밀림 — FOMC·동시만기 전까지 방향 보류, 외국인 선물 롤오버(3월물 매수 유지) 여부가 다음 분기 방향')}
-      ${scCard('dn', `추가 하락 (${HZ}일 뒤 −3% 아래)`, 'var(--down)', '반등 실패 후 저점 갱신 — 금리 인상·미 AI주 추가 붕괴·반대매매 연쇄가 겹치는 경로' + (supZ[0] ? ` · 지지 ${zl(supZ[0])}` + (supZ[1] ? ` → ${zl(supZ[1])}` : '') + (supZ[2] ? ` → ${zl(supZ[2])}` : '') : ''))}
+      ${dayHTML()}
+      ${scTable()}
       <div class="scroll" style="margin-top:8px"><table><tr><th>보유</th><th>평균</th><th>오른 비율</th><th>가운데 50%</th><th>2010~만</th><th>2026년만</th></tr>
       ${H.map(h => { const a = stat(A, h), b = sub10.length ? stat(sub10, h) : null, c = sub26.length ? stat(sub26, h) : null;
         return `<tr><td>${h}일</td><td class="${a.m > 0 ? 'up' : 'down'}">${pct(a.m * 100)}</td><td>${Math.round(a.up * 100)}%</td><td>${pct(a.q1 * 100)} ~ ${pct(a.q3 * 100)}</td><td>${b ? pct(b.m * 100) + ' · ' + Math.round(b.up * 100) + '% (' + sub10.length + ')' : '–'}</td><td>${c ? pct(c.m * 100) + ' · ' + Math.round(c.up * 100) + '% (' + sub26.length + ')' : '–'}</td></tr>`; }).join('')}
