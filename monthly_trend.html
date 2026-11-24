@@ -100,7 +100,7 @@ const prob = p => { const x = ST[String(p)]; if (!x || !x.learn) return ''; retu
   const lab = z => z == null ? '–' : z <= -2 ? '<b class="down">극단 매도</b>' : z <= -1 ? '<b class="down">강한 매도</b>' : z >= 2 ? '<b class="up">극단 매수</b>' : z >= 1 ? '<b class="up">강한 매수</b>' : '평범';
   const eok = v => v == null ? '' : `${v > 0 ? '+' : ''}${Math.abs(v) >= 10000 ? (v / 10000).toFixed(1) + '조' : v.toLocaleString() + '억'}`;
   const chg = o => (o.z != null && o.zprev != null) ? (o.z - o.zprev >= 1 ? ' ↗ 매수 쪽으로 바뀌는 중' : o.z - o.zprev <= -1 ? ' ↘ 매도 쪽으로 바뀌는 중' : '') : '';
-  let brief = '';
+  let brief = '', concl = '';
   if (BR.spot) {
     const sp_ = BR.spot, fu = BR.fut, pu = BR.put, ca = BR.call, bk = BR.book || {}, cv = bk.conv;
     const kos = v => cv ? ` (코스피 약 ${Math.round(v * cv).toLocaleString()})` : '';
@@ -128,6 +128,18 @@ const prob = p => { const x = ST[String(p)]; if (!x || !x.learn) return ''; retu
       ${SM.nd}일째까지 현물 <b>${LB[SM.spot]}</b> · 풋 <b>${PB[SM.put]}</b> · 선물 ${LB[SM.fut]} (각각 과거 36개월 같은 시점 대비 z ±1) · 이번 달 첫날 시가 대비 ${SM.mtd > 0 ? '+' : ''}${SM.mtd}%<br>
       <span class="sub">남은 기간(${SM.nd}일째 종가 → 월말): 같은 현물 상태 ${sx(SM.by_spot)} · 현물+풋 같은 상태 ${sx(SM.by_spot_put)} · 아무 달 ${sx(SM.base)}</span><br>
       <span class="sub">월 전체로 보면(2010~ 202개월, 동시 분석): 현물 매도 달은 월중 저점이 보통 15일째·88%가 한 번은 −3% 아래 · 풋은 오를 때 사고 급락 때 팔아 현금화하는 보험(풋 매도 달 −6.4%, 풋 매수 달 +5.7%) · 선물은 현물 방향에 더해 주는 게 거의 없음(p 0.39)</span></div></div>` : '';
+    // 2026-11-24 사용자: 두괄식 — 결론 표 먼저, 근거는 접힘
+    const strip = s => (s || '').replace(/<[^>]+>/g, '');
+    const hits = rules.filter(r => r.ok && r.on && (r === rules[0] ? fs : r === rules[1] ? pb : r.put ? ps : false)).map(r => strip(r.txt.split('</b>')[0]));
+    const sw = [['현물 5일 순매수 전환', sp_.d5.z != null && sp_.d5.z >= 1], ['선물이 평단 위 회복', !(bk.fut_avg && bk.S0 < bk.fut_avg)], ['풋 축소 · 콜 매수', pu.d5.z != null && ca.d5.z != null && pu.d5.z < 0 && ca.d5.z > 0]];
+    const nOk = sw.filter(x => x[1]).length;
+    concl = `<div style="margin:10px 0;padding:10px 12px;border:2px solid ${net < 0 ? 'var(--down)' : 'var(--up)'};border-radius:10px;font-size:15px;line-height:1.8"><b>결론</b> — ${verdict.replace(' — ', '<br><span class="sub" style="font-size:13px">').replace(/$/, '</span>')}<br>
+      <b>상승 베팅 전환 신호 ${nOk}/3</b> <span class="sub" style="display:inline">${sw.map(x => (x[1] ? '✅ ' : '⬜ ') + x[0]).join(' · ')}</span></div>
+      <div class="scroll"><table><tr><th>구분</th><th style="text-align:left">지금 상태 (결론)</th><th style="text-align:left">숫자</th></tr>
+        <tr><td><b>현물</b> 방향</td><td style="text-align:left;white-space:normal">${sTxt}</td><td style="text-align:left;white-space:normal" class="sub">오늘 ${eok(sp_.d1.eok)} · 5일 ${eok(sp_.d5.eok)} · 이번 달 ${eok(sp_.m.eok)} · 분기 ${eok(bk.spot_eok)}</td></tr>
+        <tr><td><b>선물</b> 전술</td><td style="text-align:left;white-space:normal">${fRole || (bk.fut_ct > 0 ? (under ? '롱 · <b>평단 아래 손실</b> → 반등 때 평단 근처 본전 매도 자리' : '롱 · 평단 위 이익') : '–')}</td><td style="text-align:left;white-space:normal" class="sub">${bk.fut_ct ? `${bk.fut_ct > 0 ? '롱' : '숏'} ${Math.abs(bk.fut_ct).toLocaleString()}계약 · 평단 ${bk.fut_avg}${kos(bk.fut_avg)} · 평가 ${eok(bk.fut_mtm)}` : ''}</td></tr>
+        <tr><td><b>옵션</b> 보험</td><td style="text-align:left;white-space:normal">${oRole || '특이 없음'}</td><td style="text-align:left;white-space:normal" class="sub">5일 풋 ${eok(pu.d5.eok)} · 콜 ${eok(ca.d5.eok)}${BR.fo20_pct != null ? ` · 콜−풋 20일 하위 ${BR.fo20_pct}%` : ''}</td></tr>
+        <tr><td><b>오늘 해당 규칙</b></td><td colspan="2" style="text-align:left;white-space:normal">${hits.length ? hits.map(h => '● ' + h).join('<br>') : '<span class="sub">해당 없음</span>'}</td></tr></table></div>`;
     brief = `<div style="border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0">
       <div style="font-weight:700;margin-bottom:6px">외국인 포지션 브리핑 <span class="sub" style="display:inline">(${fd(T.d)} · 이번 달 ${BR.nd}일째 · 매수·매도 강도는 과거 2년 대비 z)</span></div>
       <div class="step"><i style="background:var(--down)">현</i><div><b>현물 — 방향</b><br>${sTxt}<br><span class="sub">오늘 ${lab(sp_.d1.z)}(${eok(sp_.d1.eok)}) · 5일 ${lab(sp_.d5.z)}(${eok(sp_.d5.eok)})${chg(sp_.d5)} · 이번 달 ${lab(sp_.m.z)}(${eok(sp_.m.eok)}) · 분기 누적 ${eok(bk.spot_eok)}</span></div></div>
@@ -140,15 +152,17 @@ const prob = p => { const x = ST[String(p)]; if (!x || !x.learn) return ''; retu
     </div>`;
   } else if (BR.err) brief = `<div class="sub">브리핑 계산 실패: ${BR.err}</div>`;
   el.innerHTML = `<h2 style="margin:0">월중 대응 — 외국인 현물·선물·옵션으로 본 지금 상황</h2>
-    ${brief}
+    ${concl}
     <div style="border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><b>외국인 누적 수급 차트</b><span class="seg" id="cumrng"></span></div>
       <div class="sub">기간 시작일부터 누적(억원) · 점선 = 새 달 · 맨 위 = 코스피 · 마우스를 올리면 그날 값</div>
       <div id="cumchart"></div><div id="cumtip" class="sub" style="min-height:1.6em;margin-top:4px"></div></div>
+    <details style="margin-top:10px"><summary class="sub" style="cursor:pointer"><b>근거 자세히</b> — 외국인 포지션 브리핑 · 같은 상태였던 달 · 오늘 수급 읽기 규칙</summary>
+    ${brief}
     <div style="font-weight:700;margin-top:10px">오늘 수급을 이렇게 읽기 <span class="sub" style="display:inline">(검증 통과 규칙만)</span></div>
     <div class="sub" style="margin:4px 0 8px">${fd(T.d)} 기준 · 이번 달 현물 국면: <b style="color:var(--fg)">${T.reg}</b> · KOSPI ${T.ret > 0 ? '+' : ''}${T.ret}% · 하루 z(±1.5 이상이면 급증): 외국인 현물(거래대금 대비) ${zz(T.zspot)} · 선물 ${zz(T.zfut)} · 풋 ${zz(T.zput)} · 콜 ${zz(T.zcall)}</div>
     ${rules.filter(r => r.ok).map(r => `<div class="rule ${r.on && (r === rules[0] ? fs : r === rules[1] ? pb : r.put ? ps : true) ? 'hit' : ''}"><span class="mk">${r === rules[0] ? (fs ? '●' : '○') : r === rules[1] ? (pb ? '●' : '○') : r.put ? (ps ? '●' : '○') : '•'}</span><div class="rt">${r.txt}</div></div>`).join('')}
-    <div class="sub" style="margin-top:6px">● = 오늘 해당 · 검증에서 탈락한 해석(풋+현물 매도 = 하락 베팅, 하락 달 선물·콜 역할, 상승 달 콜 매수)은 표시하지 않음</div>`;
+    <div class="sub" style="margin-top:6px">● = 오늘 해당 · 검증에서 탈락한 해석(풋+현물 매도 = 하락 베팅, 하락 달 선물·콜 역할, 상승 달 콜 매수)은 표시하지 않음</div></details>`;
 })();
 (() => {
   const A = J.aux || [], el = document.getElementById('aux');
@@ -539,14 +553,10 @@ const HZ = ((J.scen || {}).hz) || 30;
       ${optPath ? (() => { const O_ = optPath, f = v => Math.round(v).toLocaleString(); const last = O_.rows[O_.rows.length - 1];
         return `<div style="margin:10px 0;padding:10px 12px;border:2px solid #8b5cf6;border-radius:10px;font-size:15px;line-height:1.8"><b>결론</b> — 12/10 만기 예상 <b>${f(last.c)}</b> (출발 ${f(base)} 대비 ${pct((last.c / base - 1) * 100)})<br>
           <b class="${O_.down ? 'down' : 'up'}">1차 ${O_.down ? '▼' : '▲'} ${f(O_.tAv)}</b> (~${O_.wkD ? 'W 만기' : 'D+' + O_.aEnd}) → <b class="${O_.dirB ? 'down' : 'up'}">2차 ${O_.dirB ? '▼' : '▲'} ${f(O_.t2v)}</b> → <b class="${O_.dirB ? 'down' : 'up'}">3차 ${O_.dirB ? '▼' : '▲'} ${O_.tBz ? f(O_.tBz.lo) + '~' + f(O_.tBz.hi) : f(O_.tBv)}</b> (월물 만기)<br>
-          <span class="sub">근거는 아래 순서: 단계표 → 날짜별 경로 → 3주체 포지션 → 가격 지도 → 일정 갈림길</span></div>`; })() : ''}
+          <span class="sub">근거는 아래 순서: 단계표 → 날짜별 경로 → 3주체 포지션 → 가격 지도</span></div>`; })() : ''}
       ${dayHTML()}
       ${opHTML()}
       ${mapHTML()}
-      <div style="margin-top:12px"><b>갈림길 지도 — 일정별 반등·박스·하락 조건</b> <span class="sub" style="display:inline">(번호 = 참고 그림의 주황 점선)</span>
-      ${tally.up + tally.box + tally.dn ? `<div style="margin:4px 0">지나간 갈림길 결과: <b class="up">반등 쪽 ${tally.up}</b> · <b>박스 ${tally.box}</b> · <b class="down">하락 쪽 ${tally.dn}</b> <span class="sub" style="display:inline">(확률에는 섞지 않고 방향 확인용)</span></div>` : ''}
-      ${roadmap}
-      <div class="sub">결과는 data/macro_calendar.csv의 result 칸에 'up|내용'·'box|내용'·'dn|내용'으로 적으면 표시(월초 첫날 판정은 자동) · 위클리 만기(매주 월·목)는 그림에만 옅게 · 매크로 조건은 해석 문장이며 확률 계산에는 넣지 않음</div></div>
       <details style="margin-top:12px"><summary class="sub" style="cursor:pointer"><b>참고</b> — 과거 비슷한 국면 통계(옵션 포지션 미반영) · 6개월 차트 · 전문가 시각</summary>
       <div class="sub">비슷했던 날 ${A.length}회(1999~${tol > 1 ? `, 범위 ${tol.toFixed(2)}배로 넓힘` : ''}) 그 뒤 ${HZ}거래일 · 띠 = 가운데 50%(진한)·80%(옅은) · 선 = 시나리오별 중앙 경로 · 주황 점선 = 큰 일정</div>
       ${svg}
