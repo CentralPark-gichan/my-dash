@@ -284,7 +284,11 @@ const HZ = ((J.scen || {}).hz) || 30;
     // 2026-11-22 사용자: 최근 6개월 실제 차트 + 향후 20일 경로를 한 그림에
     const W = 900, Hh = 300, P = 52, HB = Math.min(120, t);
     const hist = Array.from({length: HB + 1}, (_, k) => C[t - HB + k] / base - 1);
-    const col = h => A.map(i => C[i + h] / C[i] - 1);
+    // 2026-11-24 사용자: '가장 높은 확률의 시나리오 하나만' — 빈도 최다 시나리오(TOP)의 경로·범위만 표시(나머지는 접어 둠)
+    const TOP = ['up', 'box', 'dn'].sort((a, b) => grp[b].length - grp[a].length)[0];
+    const TOPN = {up: '반등', box: '박스', dn: '추가 하락'}[TOP], TOPC = {up: 'var(--up)', box: '#9aa0aa', dn: 'var(--down)'}[TOP];
+    const colAll = h => A.map(i => C[i + h] / C[i] - 1);
+    const col = h => grp[TOP].map(i => C[i + h] / C[i] - 1);
     const bands = Array.from({length: HZ + 1}, (_, h) => [q(col(h), .1), q(col(h), .25), q(col(h), .75), q(col(h), .9)]);
     const sp = {up: grp.up.length ? medPath(grp.up) : null, box: grp.box.length ? medPath(grp.box) : null, dn: grp.dn.length ? medPath(grp.dn) : null};
     // 가격 지도(차트·외국인 장부 · 엘리어트는 2026-11-22 제거) — 코스피 환산, 출발점(base) 대비 %
@@ -317,7 +321,7 @@ const HZ = ((J.scen || {}).hz) || 30;
     });
     keyEv.filter(e => e.D).forEach(e => {
       svg += `<line x1="${X(e.D)}" x2="${X(e.D)}" y1="16" y2="${Hh - 26}" stroke="#c98500" stroke-width="1.3" stroke-dasharray="2 3"/><text x="${X(e.D)}" y="13" font-size="12" text-anchor="middle" fill="#c98500" font-weight="700">${e.no}</text>`;
-      [['up', 'var(--up)'], ['box', '#9aa0aa'], ['dn', 'var(--down)']].forEach(([k, c]) => { if (sp[k] && e[k]) svg += `<circle cx="${X(e.D)}" cy="${Y(sp[k][e.D])}" r="3.5" fill="${c}"/>`; });
+      [['up', 'var(--up)'], ['box', '#9aa0aa'], ['dn', 'var(--down)']].forEach(([k, c]) => { if (sp[k] && e[k] && k === TOP) svg += `<circle cx="${X(e.D)}" cy="${Y(sp[k][e.D])}" r="3.5" fill="${c}"/>`; });
     });
     near.filter(z => z.r >= lo && z.r <= hi).forEach(z => {
       const col = z.r < 0 ? 'var(--up)' : 'var(--down)', strong = z.n >= 2;
@@ -332,7 +336,7 @@ const HZ = ((J.scen || {}).hz) || 30;
         <text x="${X(-HB * 0.25)}" y="${Y(r) - 3}" font-size="10" fill="#8b5cf6">개인 ${nm}매도 BE ${z.be.toLocaleString()}</text>`;
     });
     [['up', 'var(--up)'], ['box', '#9aa0aa'], ['dn', 'var(--down)']].forEach(([k, c]) => {
-      if (sp[k]) svg += `<polyline points="${sp[k].map((v, h) => `${X(h).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${c}" stroke-width="2.5"/>`;
+      if (sp[k] && k === TOP) svg += `<polyline points="${sp[k].map((v, h) => `${X(h).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${c}" stroke-width="2.5"/>`;
     });
     for (let j = 0; j <= 4; j++) { const v = lo + (hi - lo) * j / 4; svg += `<text x="2" y="${Y(v) + 4}" font-size="10" fill="var(--sub)">${Math.round(base * (1 + v)).toLocaleString()}</text><line x1="${P}" x2="${W - 10}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width=".5"/>`; }
     [-HB, -Math.round(HB * 2 / 3), -Math.round(HB / 3)].forEach(h => { const d = D[t + h]; if (d && d !== '가정') svg += `<text x="${X(h)}" y="${Hh - 14}" font-size="10" text-anchor="middle" fill="var(--sub)">${d.slice(2, 4)}.${d.slice(4, 6)}.${d.slice(6)}</text>`; });
@@ -377,10 +381,12 @@ const HZ = ((J.scen || {}).hz) || 30;
                   ['dn', '추가 하락', '−3%↓', 'var(--down)', supZ.slice(0, 3).map(z => Math.round(z.k).toLocaleString()).join(' → ') || '–']];
       const cpT = k => keyEv.filter(e => e[k] && CORE(e) && !e.past).slice(0, 3).map(e => `${e.no}${fdd(e.d)} ${e[k]}`).join('<br>') || '–';
       return `<div class="scroll" style="margin-top:10px"><table><tr><th>시나리오(${HZ}일 뒤)</th><th>비율</th><th>횟수</th>${HS.map(h => `<th>D+${h}${tds[h - 1] ? ' ' + fdd(tds[h - 1]) : ''}</th>`).join('')}<th>만기 코스피</th><th>도중 최저</th><th style="text-align:left">가는 레벨</th><th style="text-align:left">핵심 갈림길 (이 시나리오 조건)</th></tr>
-        ${R_.filter(r => grp[r[0]].length).map(([k, nm, def, c, lv]) => { const m = sp[k];
+        ${R_.filter(r => grp[r[0]].length && r[0] === TOP).map(([k, nm, def, c, lv]) => { const m = sp[k];
           return `<tr><td><b style="color:${c}">${nm}</b> <span class="sub" style="display:inline">${def}</span></td><td><b>${pr(k)}%</b></td><td>${grp[k].length}</td>${HS.map(h => `<td class="${m[h] > 0 ? 'up' : 'down'}">${pct(m[h] * 100)}</td>`).join('')}
             <td><b>${lvl(m[HZ])}</b></td><td>${pct(Math.min(...m) * 100)}</td><td style="text-align:left">${lv}</td><td style="text-align:left;white-space:normal;min-width:260px;font-size:12.5px">${cpT(k)}</td></tr>`; }).join('')}
-      </table></div><div class="sub">수익률·코스피 = 각 시나리오 중앙 경로 · 비율 = 과거 비슷한 국면 ${A.length}회 중 빈도(예언 아님) · 가는 레벨 = 가격 지도 지지·저항</div>`;
+      </table></div><details style="margin-top:4px"><summary class="sub" style="cursor:pointer">나머지 시나리오 보기 (${R_.filter(r => grp[r[0]].length && r[0] !== TOP).map(r => r[1] + ' ' + pr(r[0]) + '%').join(' · ')})</summary><div class="scroll"><table>
+        ${R_.filter(r => grp[r[0]].length && r[0] !== TOP).map(([k, nm, def, c, lv]) => { const m = sp[k]; return `<tr><td><b style="color:${c}">${nm}</b> <span class="sub" style="display:inline">${def}</span></td><td>${pr(k)}%</td><td>${grp[k].length}회</td>${HS.map(h => `<td>${pct(m[h] * 100)}</td>`).join('')}<td>만기 ${lvl(m[HZ])}</td><td style="text-align:left;white-space:normal;min-width:260px;font-size:12.5px">${cpT(k)}</td></tr>`; }).join('')}</table></div></details>
+      <div class="sub">수익률·코스피 = 시나리오 중앙 경로 · 비율 = 과거 비슷한 국면 ${A.length}회 중 빈도(예언 아님) · 가는 레벨 = 가격 지도 지지·저항</div>`;
     }
     function dayHTML() {
       // 2026-11-24 사용자: 날짜별 코스피 가능 수치 표 + 차트 — 과거 유사 국면(위 띠와 같은 표본)의 날짜별 분포를 코스피로 환산
@@ -411,17 +417,18 @@ const HZ = ((J.scen || {}).hz) || 30;
           <circle cx="${x}" cy="${Y2(r.q50)}" r="3" fill="#4f46e5"/>`;
         if (HZ <= 15 || r.h % 2 === 1 || r.h === HZ) g += `<text x="${x}" y="${H2 - 16}" font-size="10" text-anchor="middle" fill="var(--sub)">${r.d ? fdd(r.d) : 'D+' + r.h}</text>`;
       });
-      g += `<text x="${L2}" y="${H2 - 2}" font-size="10" fill="var(--sub)">막대 = 가운데 50% · 선 = 80% · 점 = 중앙 · 주황 점선 = 만기·큰 일정 · 보라 = 월물 개인 매도 손익분기</text></svg>`;
+      g += `<polyline points="${rows.map(r => `${X2(r.h).toFixed(1)},${Y2(r.q50).toFixed(1)}`).join(' ')}" fill="none" stroke="${TOPC}" stroke-width="2"/>`;
+      g += `<text x="${L2}" y="${H2 - 2}" font-size="10" fill="var(--sub)">점 = 예상 코스피(가장 빈도 높은 시나리오 중앙) · 막대 = 그 시나리오 안 25~75% · 선 = 10~90% · 주황 = 만기·큰 일정 · 보라 = 월물 개인 매도 손익분기</text></svg>`;
       const near_ = v => { const hit = lvls.filter(l => Math.abs(l[0] - v) / v < 0.01); return hit.length ? ' <span style="color:#8b5cf6">◆</span>' : ''; };
       const tr = rows.map(r => {
         const e_ = evOf(r.d), big = /만기|FOMC|CPI|고용/.test(e_);
         return `<tr${big ? ' style="background:var(--upbg)"' : ''}><td>${r.d ? fdd(r.d) : '–'} <span class="sub" style="display:inline">D+${r.h}</span></td>
-          <td class="down">${Math.round(r.q10).toLocaleString()}${near_(r.q10)}</td><td>${Math.round(r.q25).toLocaleString()}</td><td><b>${Math.round(r.q50).toLocaleString()}</b></td><td>${Math.round(r.q75).toLocaleString()}</td><td class="up">${Math.round(r.q90).toLocaleString()}${near_(r.q90)}</td>
+          <td><b>${Math.round(r.q50).toLocaleString()}</b>${near_(r.q50)}</td><td class="${r.q50 >= base ? 'up' : 'down'}">${pct((r.q50 / base - 1) * 100)}</td><td>${Math.round(r.q25).toLocaleString()} ~ ${Math.round(r.q75).toLocaleString()}</td>
           <td style="text-align:left;white-space:normal;min-width:220px;font-size:12.5px">${e_ || ''}</td></tr>`;
       }).join('');
-      return `<div style="margin-top:12px"><b>날짜별 코스피 가능 범위</b> <span class="sub" style="display:inline">(과거 비슷한 국면 ${A.length}회의 날짜별 분포를 출발점 ${Math.round(base).toLocaleString()}에 적용 · 확률이 아니라 과거 빈도 · ${WK_ ? WK_.ser.slice(2) + ' 위클리 만기 ' + fdd(WK_.exp) + ' · ' : ''}월물 만기 ${fdd(S.exp || '')})</span>
+      return `<div style="margin-top:12px"><b>날짜별 코스피 — 가장 빈도 높은 시나리오: <span style="color:${TOPC}">${TOPN} ${pr(TOP)}%</span></b> <span class="sub" style="display:inline">(과거 비슷한 국면 ${A.length}회 중 ${grp[TOP].length}회가 이 경로 · 출발점 ${Math.round(base).toLocaleString()} · 확률이 아니라 과거 빈도 · ${WK_ ? WK_.ser.slice(2) + ' 위클리 만기 ' + fdd(WK_.exp) + ' · ' : ''}월물 만기 ${fdd(S.exp || '')})</span>
         ${g}
-        <div class="scroll" style="margin-top:6px"><table><tr><th>날짜</th><th>하단(10%)</th><th>아래(25%)</th><th>중앙</th><th>위(75%)</th><th>상단(90%)</th><th style="text-align:left">일정</th></tr>${tr}</table></div>
+        <div class="scroll" style="margin-top:6px"><table><tr><th>날짜</th><th>예상 코스피(중앙)</th><th>출발 대비</th><th>이 시나리오 안 범위(25~75%)</th><th style="text-align:left">일정</th></tr>${tr}</table></div>
         <div class="sub">◆ = 그 값이 월물 개인 매도 손익분기 1% 안(공략·가속 구간) · 야간선물 변동 칸에 값을 넣으면 출발점을 옮겨 다시 계산</div></div>`;
     }
     function opHTML() {
