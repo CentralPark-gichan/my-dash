@@ -597,10 +597,43 @@ const HZ = ((J.scen || {}).hz) || 30;
         ['월물 만기 외국인 선물 롤오버 유지 + 풋 정리', '만기 뒤 되밀림 약화'],
         [`${f(deep ? deep.v : O_.tAv)} 아래 종가`, '2차 반등 무산 → 다음 개인 풋 손익분기로'],
         ['반등 중 외국인 선물 순매도 전환', `2차 ${f(O_.t2v)}가 천장`]];
+      // 2026-11-25 사용자: 분기 선물 만기 시나리오 — 외국인 선물 롱 본전 동기 × 매크로 일정 × 과거 분기 만기 통계
+      let expHTML = '';
+      const expD = S.exp || tds[HZ - 1] || '';
+      if (/(03|06|09|12)$/.test(expD.slice(0, 6)) && bk.fut_ct) {
+        const evs = S.ev || [];
+        const fe = re => evs.find(e => re.test(e.e) && !e.past);
+        const callE = fe(/월초 첫날/), fomcE = fe(/FOMC/), jobE = fe(/고용/), msciE = fe(/MSCI/);
+        const di = d => tds.indexOf(d);
+        const wS = callE && di(callE.d) >= 0 ? tds[di(callE.d) + 1] : tds[Math.max(0, HZ - 7)];
+        const wE = fomcE && di(fomcE.d) >= 0 ? fomcE.d : tds[HZ - 2];
+        const fd2 = d => d ? fdd(d) : '–';
+        const mtmB = futK ? Math.round((bk.S0 - bk.fut_avg) * 250000 * bk.fut_ct / 1e8) : null;
+        const half = [O_.t2v, O_.tBz ? (O_.t2v + O_.tBz.lo) / 2 : O_.t2v * 1.02];
+        const sc = [
+          ['<b class="up">본전 시세</b>', `${callE ? fd2(callE.d) + ' ▲ 판정' : '월초 ▲'} + FOMC 완화 + 반도체 반등`, `<b>${O_.tBz ? f(O_.tBz.lo) + '~' + f(O_.tBz.hi) : f(futK || ceil)}</b>`, '외국인 선물 본전 청산·롤오버 → 만기 뒤 부담 적음'],
+          ['<b>기본: 반쯤 시세</b>', `${callE ? fd2(callE.d) : '월초'} ■ · FOMC 중립`, `<b>${f(half[0])}~${f(half[1])}</b>`, '본전 못 미친 채 정산 → 만기 뒤 되밀림 경향'],
+          ['<b class="down">시세 없음</b>', '외국인 선물 매도 전환 · FOMC 매파 · 반도체 약세', `<b>${f(O_.tAv)} 아래</b>`, '롤오버 없이 청산 → 다음 분기 하락 베팅'],
+        ];
+        const chk = [
+          [callE ? fd2(callE.d) : '월초 첫날', '월초 첫날 판정 — 외국인 현물 z ≥ +1이면 ▲ (시세 가능성 ↑)'],
+          [`${fd2(wS)}~${fd2(wE)}`, '시세 창(만기 전주 = 변동성 최대) — 외국인 선물 순매수 지속 · 현물 매도 멈춤' + (jobE ? ` · ${fd2(jobE.d)} 고용` : '')],
+          [fomcE ? fd2(fomcE.d) : 'FOMC', 'FOMC(한국 다음 날 새벽) — 인상 + 추가 인상 시사면 시세 무산 쪽'],
+          [fd2(expD), '동시만기 — 외국인 선물 롤오버(유지) vs 청산(매도)' + (msciE ? '' : '')],
+        ];
+        expHTML = `<div style="margin-top:12px"><b>분기 만기 시나리오 — ${fd2(expD)} 선물·옵션 동시만기</b> <span class="sub" style="display:inline">(외국인이 만기 전 '시세'를 낼까)</span>
+          <div class="scroll" style="margin-top:6px"><table><tr><th>외국인 선물 장부</th><th>값</th></tr>
+            <tr><td>분기 롱</td><td>${(bk.fut_ct || 0).toLocaleString()}계약 · 평단 ${bk.fut_avg} (코스피 약 <b>${futK ? f(futK) : '–'}</b>)</td></tr>
+            <tr><td>지금 평가</td><td>${bk.S0} → ${mtmB != null ? (mtmB > 0 ? '+' : '') + mtmB.toLocaleString() + '억' : '–'} ${bk.S0 < bk.fut_avg ? '<b>(손실 → 만기 전 본전 동기)</b>' : '(이익)'}</td></tr></table></div>
+          <div class="scroll" style="margin-top:6px"><table><tr><th>시나리오</th><th style="text-align:left">조건</th><th>만기 무렵 코스피</th><th style="text-align:left">만기 뒤</th></tr>${sc.map(r => `<tr><td>${r[0]}</td><td style="text-align:left;white-space:normal">${r[1]}</td><td>${r[2]}</td><td style="text-align:left;white-space:normal">${r[3]}</td></tr>`).join('')}</table></div>
+          <div class="scroll" style="margin-top:6px"><table><tr><th>날짜</th><th style="text-align:left">확인할 것</th></tr>${chk.map(r => `<tr><td>${r[0]}</td><td style="text-align:left;white-space:normal">${r[1]}</td></tr>`).join('')}</table></div>
+          <div class="sub">과거(표본 작음, 참고): 하락장(60일 고점 −15%↓) 분기 만기 9회 — 만기 전 5일 +3.1% · 만기 뒤 5일 −2.3%(오른 비율 33%) · 외국인 분기 선물 롱이 만기 12일 전 평단 아래였던 3회(2022~) — 평단 도달 1회 · 만기 뒤 5일 평균 −2.6% → 기본 = 반쯤 시세 뒤 되밀림</div></div>`;
+      }
       box.innerHTML = `<h2 style="margin:0">종합 결론 — 옵션명가 포지션분석 × 외국인 장부</h2>
         <div style="margin:8px 0;font-size:16px;line-height:1.7">${head}</div>
         <div class="scroll"><table><tr><th>구간</th><th>날짜</th><th>예상</th><th style="text-align:left">근거</th></tr>${rows.map(r => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td style="text-align:left;white-space:normal">${r[3]}</td></tr>`).join('')}</table></div>
         <div class="scroll" style="margin-top:6px"><table><tr><th style="text-align:left">이렇게 되면</th><th style="text-align:left">결론 변경</th></tr>${chg.map(r => `<tr><td style="text-align:left;white-space:normal">${r[0]}</td><td style="text-align:left;white-space:normal">${r[1]}</td></tr>`).join('')}</table></div>
+        ${expHTML}
         <div class="sub">출발 ${f(base)} · 철칙 + 검증 규칙을 합친 가설, 매일 다시 계산 · 자세한 근거는 아래 '월물 만기까지 시나리오'와 '월중 대응'</div>`;
     })();
   }
