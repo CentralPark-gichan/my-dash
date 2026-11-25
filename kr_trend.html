@@ -1143,6 +1143,10 @@ if (window.PEMODE) {
   $('#ttl').textContent = '사모투신 수급전략';
   document.title = '사모투신 수급전략';
   VIEW = 'pe';
+} else {
+  // 2026-11-25 사용자: '국내 추세·눌림목 수급 탭의 사모수급 전략은 겹치니 없애줘' → 사모 전략·사모투신 매수 카드는 pe_flow.html에만 표시(렌더 로직은 유지, 숨김 보관)
+  const hid = document.createElement('div'); hid.hidden = true; document.body.append(hid);
+  ['pfcard', 'ifcard', 'dtcard'].forEach(id => { const el = document.getElementById(id); if (el) hid.append(el); });
 }
 function setView(v) {
   if (!document.getElementById('v-' + v)) v = 'sum';
