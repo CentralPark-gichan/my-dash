@@ -845,10 +845,16 @@ let HZ = ((J.scen || {}).hz) || 30; const HZ0 = HZ;
     <td style="text-align:left;white-space:normal">${c.flow}${c.flow_on && !/수급 무관/.test(c.flow) ? ' <b class="up">(지금)</b>' : ''}</td><td style="text-align:left;white-space:normal">${c.ind}${c.ind_on ? ' <b class="up">(' + fdd(c.ind_on) + ')</b>' : ''}</td>
     <td>${c.grade === '검증 통과' ? '<b>검증 통과</b>' : '후보'}</td>${cell(c, 5)}${cell(c, 10)}${cell(c, 20)}<td>${c.key ? `<button class="fxbtn" data-k="${c.key}" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:5px 10px;cursor:pointer;font:inherit;font-size:12.5px;white-space:nowrap"><span style="color:${(J.fxmk.find(m => m.k === c.key) || {}).col}">◆</span> 차트 표시 <span class="sub" style="display:inline">(${c.n_all}회)</span></button>` : ''}</td></tr>`).join('');
   const nOn = X.combos.filter(c => c.on).length;
-  el.innerHTML = `<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:baseline"><h2 style="margin:0">수급 극단 × 지표 신호</h2><span class="sub">기준 ${fd(X.date)} · 확률 = 2011~ 백테스트(신호 날 종가 → N일 뒤 종가)</span></div>
+  // 2026-11-25 사용자: 평소엔 접어 두고, 당일 신호가 하나라도 뜨면 '신호 나옴'만 표시 → 그때 펼쳐 봄
+  const todayInd = Object.entries(X.inds_on || {}).filter(([k, d]) => String(d) === String(X.date)).map(([k]) => k);
+  const nToday = X.combos.filter(c => c.on && String(c.ind_on) === String(X.date)).length;
+  const sig = nToday || todayInd.length;
+  el.innerHTML = `<details${sig ? '' : ''}><summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:baseline"><h2 style="margin:0;display:inline">수급 극단 × 지표 신호</h2>
+    <span>${sig ? `<b class="up" style="font-size:15px">🔔 오늘 신호 나옴</b> <span class="sub" style="display:inline">(${[nToday ? '켜진 조합 ' + nToday + '개' : '', todayInd.length ? '지표: ' + todayInd.join(', ') : ''].filter(Boolean).join(' · ')}) · 펼쳐 보기 ▾</span>` : `<span class="sub">오늘 신호 없음${nOn ? ' · 켜진 조합 ' + nOn + '개(이전 발생)' : ''} · 펼쳐 보기 ▾</span>`}</span></summary>
+    <div class="sub" style="margin-top:4px">기준 ${fd(X.date)} · 확률 = 2011~ 백테스트(신호 날 종가 → N일 뒤 종가)</div>
     <div style="margin:8px 0;font-size:15px">${nOn ? `<b class="up">지금 켜진 조합 ${nOn}개</b>` : '<b>지금 켜진 조합 없음</b>'} <span class="sub" style="display:inline">· 수급 극단(직전 5일): ${(X.flows_on || []).filter(f => !/수급 무관/.test(f)).join(', ') || '없음'} · 지표 신호(직전 10일): ${Object.keys(X.inds_on || {}).join(', ') || '없음'}</span></div>
     <div class="scroll"><table><tr><th>상태</th><th style="text-align:left">수급 극단 (직전 5일)</th><th style="text-align:left">지표 신호</th><th>등급</th><th>5일 뒤</th><th>10일 뒤</th><th>20일 뒤</th><th>과거 발생</th></tr>${rows}</table></div>
-    <div class="sub" style="margin-top:6px">'차트 표시'를 누르면 맨 위 KOSPI 차트에 그 조합이 켜진 날(2011~)이 ◆로 표시됩니다(아래 ◆ = 오르더라 쪽, 위 ◆ = 내리더라 쪽 · 다시 누르면 숨김 · 차트에서 '전체'로 넓혀 보기) · ▲ = 오른 비율 · ▼ = 내린 비율 · 극단 = 5일 순매수 합이 직전 1년 상·하위 10% · '검증 통과' = 다중비교 보정·두 구간 일관 · '후보' = 보정 전 유의(사건 적음) · 규칙만(모형 없음) · 탐색 목록 #23</div>`;
+    <div class="sub" style="margin-top:6px">'차트 표시'를 누르면 맨 위 KOSPI 차트에 그 조합이 켜진 날(2011~)이 ◆로 표시됩니다(아래 ◆ = 오르더라 쪽, 위 ◆ = 내리더라 쪽 · 다시 누르면 숨김 · 차트에서 '전체'로 넓혀 보기) · ▲ = 오른 비율 · ▼ = 내린 비율 · 극단 = 5일 순매수 합이 직전 1년 상·하위 10% · '검증 통과' = 다중비교 보정·두 구간 일관 · '후보' = 보정 전 유의(사건 적음) · 규칙만(모형 없음) · 탐색 목록 #23</div></details>`;
   el.addEventListener('click', e => { const b = e.target.closest('.fxbtn'); if (!b || !window.fxToggle) return; const on = window.fxToggle(b.dataset.k);
     b.style.background = on ? 'var(--upbg)' : 'var(--card)'; b.style.fontWeight = on ? '700' : '400'; b.childNodes[1].textContent = on ? ' 표시 중 ' : ' 차트 표시 ';
     if (on) document.getElementById('chart').scrollIntoView({behavior: 'smooth', block: 'center'}); });
