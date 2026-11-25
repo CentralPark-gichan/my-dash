@@ -219,7 +219,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
 <body>
 <div class="topbar"><div class="in">
   <div class="brand"><i></i>My Dash</div>
-  <nav class="navs"><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="pe_flow.html">사모투신 수급전략</a><a href="market_trend.html">시장 추세</a><a href="flow_trend.html">시장추세(수급분석)</a><a href="monthly_trend.html">시장추세(매월)</a></nav>
+  <nav class="navs"><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="pe_flow.html">사모투신 수급전략</a><a href="market_trend.html">시장 추세</a><a href="monthly_trend.html">시장추세(매월)</a></nav>
   <div class="sq" id="sqbox" style="display:none"><input id="sq" type="search" placeholder="종목 검색 (이름·코드)" autocomplete="off"><div id="sqlist"></div></div>
   <span class="day" id="day"></span>
 </div></div>
@@ -965,17 +965,18 @@ function drawCand() {
 setTimeout(initCand);
 // ── 모의투자 장부 (research/paper_trade.py — 2026-11-17~ 앞으로만, 매수 신호 종목 종가 100만원 / 추세 이탈일 종가 전량 매도) ──
 async function initPaper() {
-  if (META.market !== 'KR') return;
+  // 2026-11-25 사용자: 미국 추세·눌림목도 모의장부(1건 $1,000, 11/25부터)
   let P; try { P = await (await fetch(`${META.charts}/paper.json`)).json(); } catch (e) { return; }
-  const S = P.summary, won = x => (x > 0 ? '+' : '') + Math.round(x).toLocaleString() + '원';
-  const row = (x, open) => `<tr data-c="${x.code}" style="cursor:pointer"><td style="text-align:left"><b>${x.name}</b> <span class="sub">${x.industry || ''}</span></td><td>${fmtD(x.buy_date)}</td><td>${Math.round(x.buy).toLocaleString()}</td>
-    <td>${open ? Math.round(x.last).toLocaleString() : fmtD(x.sell_date)}</td><td>${open ? '' : Math.round(x.sell).toLocaleString()}</td>
+  const S = P.summary, US_ = S.cur === '$', won = x => US_ ? (x > 0 ? '+' : x < 0 ? '−' : '') + '$' + Math.abs(x).toLocaleString(undefined, {maximumFractionDigits: 0}) : (x > 0 ? '+' : '') + Math.round(x).toLocaleString() + '원',
+    px = x => US_ ? (+x).toFixed(2) : Math.round(x).toLocaleString(), unitTxt = US_ ? '$' + (S.unit || 1000).toLocaleString() : '100만원';
+  const row = (x, open) => `<tr data-c="${x.code}" style="cursor:pointer"><td style="text-align:left"><b>${x.name}</b> <span class="sub">${x.industry || ''}</span></td><td>${fmtD(x.buy_date)}</td><td>${px(x.buy)}</td>
+    <td>${open ? px(x.last) : fmtD(x.sell_date)}</td><td>${open ? '' : px(x.sell)}</td>
     <td class="${sign(x.ret)}"><b>${x.ret > 0 ? '+' : ''}${x.ret}%</b></td><td class="${sign(open ? x.value - x.cost : x.pnl)}">${won(open ? x.value - x.cost : x.pnl)}</td><td style="text-align:left" class="sub">${open ? (x.warn || '') : (x.why || '')}</td></tr>`;
   const head = open => `<tr><th style="text-align:left">종목</th><th>매수일</th><th>매수가</th><th>${open ? '현재가' : '매도일'}</th><th>${open ? '' : '매도가'}</th><th>수익률</th><th>손익</th><th style="text-align:left">${open ? '비고' : '이탈 사유'}</th></tr>`;
   $('#ppcard').style.display = '';
-  $('#ppcard').innerHTML = `<div class="sec-h">모의투자 장부 <span class="sub">${fmtD(S.start)}부터 · 매수 신호 종목을 그날 종가에 100만원씩, 추세 이탈일 종가에 전량 매도(손절·익절 구분 없음) · 수수료·세금·슬리피지 반영</span></div>
+  $('#ppcard').innerHTML = `<div class="sec-h">모의투자 장부 <span class="sub">${fmtD(S.start)}부터 · 매수 신호 종목을 그날 종가에 ${unitTxt}씩, 추세 이탈일 종가에 전량 매도(손절·익절 구분 없음) · 수수료·세금·슬리피지 반영</span></div>
     <div style="padding:6px 20px;display:flex;gap:22px;flex-wrap:wrap">
-      <div>보유 <b>${S.n_open}</b>종목 · 투입 ${(S.invested_now / 1e4).toLocaleString()}만원</div>
+      <div>보유 <b>${S.n_open}</b>종목 · 투입 ${US_ ? '$' + S.invested_now.toLocaleString() : (S.invested_now / 1e4).toLocaleString() + '만원'}</div>
       <div>누적 손익 <b class="${sign(S.total_pnl)}">${won(S.total_pnl)}</b> <span class="sub">(실현 ${won(S.realized)} · 평가 ${won(S.unrealized)})</span></div>
       <div>청산 ${S.n_closed}건${S.n_closed ? ` · 승률 ${S.win_rate}% · 평균 ${S.avg_ret > 0 ? '+' : ''}${S.avg_ret}% · PF ${S.pf ?? '–'}` : ''}</div></div>
     <div style="padding:0 20px 4px"><b>보유 중</b></div><div style="overflow-x:auto;padding:0 20px"><table>${head(true)}${P.open.map(x => row(x, true)).join('') || '<tr><td colspan="8" class="empty">보유 종목 없음</td></tr>'}</table></div>
@@ -1143,6 +1144,10 @@ if (window.PEMODE) {
   $('#ttl').textContent = '사모투신 수급전략';
   document.title = '사모투신 수급전략';
   VIEW = 'pe';
+} else {
+  // 2026-11-25 사용자: '국내 추세·눌림목 수급 탭의 사모수급 전략은 겹치니 없애줘' → 사모 전략·사모투신 매수 카드는 pe_flow.html에만 표시(렌더 로직은 유지, 숨김 보관)
+  const hid = document.createElement('div'); hid.hidden = true; document.body.append(hid);
+  ['pfcard', 'ifcard', 'dtcard'].forEach(id => { const el = document.getElementById(id); if (el) hid.append(el); });
 }
 function setView(v) {
   if (!document.getElementById('v-' + v)) v = 'sum';

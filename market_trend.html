@@ -16,7 +16,7 @@ svg text{font-family:inherit}table{border-collapse:collapse;width:100%;font-size
 .up{color:var(--up)}.down{color:var(--down)}
 /* 2026-11-22 가독성 */html,body{overflow-x:hidden}body{font-size:15px;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}h1{margin:6px 0 2px}h2{font-size:17px;line-height:1.4;margin:0 0 8px}.sub{font-size:13px;line-height:1.6}.card{padding:16px 18px;margin:14px 0;min-width:0}table{font-size:13px}th,td{padding:7px 8px}.lg{font-size:13px}.seg button{font-size:13px}.kpi b{font-size:19px}details.card summary{cursor:pointer;font-size:16px;line-height:1.5}details.card summary .sub{font-size:13px}details.card[open] summary{margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 </style></head><body><div class="wrap">
-<nav><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="pe_flow.html">사모투신 수급전략</a><a href="market_trend.html" class="on">시장 추세</a><a href="flow_trend.html">시장추세(수급분석)</a><a href="monthly_trend.html">시장추세(매월)</a></nav>
+<nav><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="pe_flow.html">사모투신 수급전략</a><a href="market_trend.html" class="on">시장 추세</a><a href="monthly_trend.html">시장추세(매월)</a></nav>
 <h1>KOSPI 시장 추세</h1><div class="sub" id="hd"></div>
 <div class="card"><div class="kpis" id="now"></div><div class="sub" id="recent" style="margin-top:10px;line-height:1.8"></div></div>
 <div class="card" id="flow" style="display:none"></div>
@@ -200,7 +200,7 @@ setTF('D'); window.addEventListener('resize', draw);
     : N.call > 0 ? `<b class="up" style="font-size:20px">▲ 상승</b> <span class="sub">이번 달이 전월보다 높게 끝날 쪽 · ${N.up_r.join(', ')} · ${st(BN.stat.up)}</span>`
     : N.call < 0 ? `<b class="down" style="font-size:20px">▼ 하락</b> <span class="sub">이번 달이 전월보다 낮게 끝날 쪽 · ${N.dn_r.join(', ')} · ${st(BN.stat.down)}</span>`
     : `<b style="font-size:20px;color:var(--sub)">■ 판단불가(횡보)</b> <span class="sub">${N.up_r.length && N.dn_r.length ? '근거 엇갈림' : '월초 첫날 수급·변동성 평범'} · 이런 달은 높게 끝난 비율 ${BN.stat.none.learn.hit}%(동전 던지기)</span>`;
-  el.innerHTML = `<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:baseline"><h2 style="margin:0;font-size:16px">이번 달 월초 판정 — ${mm}</h2><a href="flow_trend.html" class="sub">수급분석 페이지에서 자세히 →</a></div>
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:baseline"><h2 style="margin:0;font-size:16px">이번 달 월초 판정 — ${mm}</h2><a href="monthly_trend.html" class="sub">시장추세(매월)에서 자세히 →</a></div>
     ${F.final ? `<div style="margin:6px 0;font-size:15px"><b>최종 판단:</b> ${F.final.dec == null ? '<b style="color:#c98500">◐ 판단 대기</b>' : F.final.dec > 0 ? '<b class="up">● 매수</b>' : '<b style="color:var(--sub)">○ 관망</b>'} <span class="sub">${F.final.why} · 최근(2024~) 매수 달 승률 ${F.final.val ? F.final.val.win : '–'}% · 최대 낙폭 ${F.final.val ? F.final.val.mdd : '–'}%</span></div>` : ''}
     <div style="margin:6px 0">${big}</div>
     <div class="sub" style="line-height:1.8">월초 첫날 z: 외국인 현물 ${z(N.zf)} · 개인 현물 ${z(N.zi)} · 변동성(RV) ${N.rv_ch == null ? '–' : (N.rv_ch > 0 ? '+' : '') + N.rv_ch + '%'}
