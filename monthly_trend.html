@@ -543,8 +543,8 @@ let HZ = ((J.scen || {}).hz) || 30; const HZ0 = HZ;
       if (!optPath) return '<div class="sub">옵션명가 포지션분석 데이터 없음</div>';
       const O_ = optPath, rows = O_.rows, WK = S.wick || {};
       const evOf = d => (S.ev || []).filter(e => e.d === d).map(e => e.e.replace(/\(.*?\)/, '')).join(' · ');
-      // 2026-11-25 사용자: 매크로 일정을 경로에 표기 — 짧은 이름
-      const evShort = t => { const m = [[/FOMC/, 'FOMC'], [/CPI/, 'CPI'], [/고용/, '미 고용'], [/금통위/, '금통위'], [/동시만기|선물.*만기/, '동시만기'], [/MSCI/, 'MSCI'], [/수출입/, '수출입'], [/PCE/, 'PCE'], [/추수감사|휴장/, '미 휴장'], [/월초 첫날/, '월초 판정'], [/위클리/, 'W 만기']];
+      // 2026-11-25 사용자: 경로에 표기할 일정은 FOMC · CPI · PPI · 옵션 만기만(해석 없이 표시만)
+      const evShort = t => { const m = [[/FOMC/, 'FOMC'], [/CPI/, 'CPI'], [/PPI/, 'PPI'], [/동시만기/, '동시만기'], [/월물 만기/, '월물 만기'], [/위클리/, 'W 만기']];
         const o = []; m.forEach(([re, nm]) => { if (re.test(t) && !o.includes(nm)) o.push(nm); }); return o.slice(0, 2).join('·'); };
       const W2 = 900, H2 = 320, L2 = 56, R2 = 150;
       const all = rows.flatMap(r => [r.lo, r.hi, r.lw ? r.lw.v : r.lo, r.uw ? r.uw.v : r.hi]).concat([base]).concat(O_.tBz ? [O_.tBz.lo, O_.tBz.hi] : []).concat(O_.NS ? O_.NS.Q.map(r => base * (1 + r)).concat([O_.NS.hi3]) : []);
@@ -557,8 +557,9 @@ let HZ = ((J.scen || {}).hz) || 30; const HZ0 = HZ;
       [[O_.tA, O_.tAv, '1차'], [O_.t2, O_.t2v, '2차'], ...(O_.tBz ? [] : [[O_.tB, O_.tBv, '3차']])].forEach(([z, v, nm]) => { if (v >= lo2 && v <= hi2) g += `<line x1="${L2}" x2="${W2 - R2}" y1="${Y2(v)}" y2="${Y2(v)}" stroke="#8b5cf6" stroke-dasharray="2 3" opacity=".8"/><text x="${W2 - R2 + 4}" y="${Y2(v) + 4}" font-size="10" fill="#8b5cf6">${nm} ${Math.round(v).toLocaleString()}${z ? ' (' + z.t + ')' : ''}</text>`; });
       rows.forEach(r => {
         const x = X2(r.h), e_ = evOf(r.d);
-        if (e_) { const sn = evShort(e_); g += `<line x1="${x}" x2="${x}" y1="10" y2="${H2 - 34}" stroke="#c98500" stroke-dasharray="2 3" opacity="${/만기|FOMC|CPI|고용/.test(e_) ? .7 : .35}"/>`;
-          if (sn) g += `<text x="${x}" y="${r.h % 2 ? 11 : 22}" font-size="9.5" text-anchor="middle" fill="#c98500" font-weight="700">${sn}</text>`; }
+        const sn = e_ ? evShort(e_) : '';
+        if (sn) { g += `<line x1="${x}" x2="${x}" y1="10" y2="${H2 - 34}" stroke="#c98500" stroke-dasharray="2 3" opacity=".7"/>`;
+          g += `<text x="${x}" y="${r.h % 2 ? 11 : 22}" font-size="9.5" text-anchor="middle" fill="#c98500" font-weight="700">${sn}</text>`; }
         g += `<rect x="${x - bw / 2}" y="${Y2(r.hi)}" width="${bw}" height="${Math.max(1, Y2(r.lo) - Y2(r.hi))}" fill="#8b5cf6" opacity=".22" rx="2"/>`;
         if (r.lw) g += `<line x1="${x}" x2="${x}" y1="${Y2(r.lo)}" y2="${Y2(r.lw.v)}" stroke="var(--down)" stroke-width="1.5"/><path d="M${x - 5},${Y2(r.lw.v) - 6} L${x + 5},${Y2(r.lw.v) - 6} L${x},${Y2(r.lw.v)} Z" fill="var(--down)"/>`;
         if (r.uw) g += `<line x1="${x}" x2="${x}" y1="${Y2(r.hi)}" y2="${Y2(r.uw.v)}" stroke="var(--up)" stroke-width="1.5"/><path d="M${x - 5},${Y2(r.uw.v) + 6} L${x + 5},${Y2(r.uw.v) + 6} L${x},${Y2(r.uw.v)} Z" fill="var(--up)"/>`;
@@ -593,22 +594,6 @@ let HZ = ((J.scen || {}).hz) || 30; const HZ0 = HZ;
           <tr><td><b>③ 월물 만기까지</b></td><td>${dd(N.dS)} ~ ${dd(HZ)} 만기</td><td class="${N.lf ? 'up' : 'down'}"><b>${N.lf ? '▲' : '▼'} ${Math.round(N.lo3).toLocaleString()}~${Math.round(N.hi3).toLocaleString()}</b></td><td>${rpTxt(reachP(N.lf, N.lo3, HZ))}</td><td style="text-align:left;white-space:normal">${N.why3}<br><span class="sub">출발 확인: 개인이 반대로 돌아섬(콜 순매도·풋 순매수) + 외국인 선물 순매수 전환 — 그 전 반등은 개인이 따라붙는 반등 → 다시 눌림</span></td></tr></table></div>
           <div class="sub">규칙 고정: ① 외국인 선물 ${N.lf ? '롱이면 출발점 아래 가장 가까운 개인 풋' : '숏이면 출발점 위 가장 가까운 개인 콜'} 매도 손익분기 · ② 다음 달 첫 거래일 전까지 머묾 · ③ 외국인 이익·개인 손실 구간 · 도달 빈도는 출발점부터(앞 단계 무관) · 포지션은 추정치</div></div>`; })() : ''}
         ${g}
-        ${(() => {
-          // 2026-11-25 사용자: "매크로 일정을 예상 경로에 표기하면서, 외국인이 이런 이벤트를 어떻게 이용할지" — 방향은 수급, 이벤트 = 명분·타이밍(규칙 템플릿, 가설)
-          const N = O_.NS, kl = O_.kills || [], kEnd = Math.max(0, ...kl.map(k => k.h));
-          const evs = (S.ev || []).filter(e => tds.indexOf(e.d) >= 0 && !/위클리 옵션 만기/.test(e.e) || (tds.indexOf(e.d) >= 0 && /위클리/.test(e.e) && tds.indexOf(e.d) + 1 === O_.wkD));
-          if (!evs.length) return '';
-          const by = {}; evs.forEach(e => { (by[e.d] = by[e.d] || []).push(e.e.replace(/\(.*?\)/, '')); });
-          const phase = h => h === HZ ? ['만기', '남은 개인 매도(콜·풋) 마지막 정리 → 정산. 이벤트와 겹치면 장중 마지막 흔들기'] :
-            (h <= kEnd ? ['킬 구간', `이벤트 변동성을 명분으로 개인 매도 손익분기(${kl.map(k => Math.round(k.v).toLocaleString()).join('·')}) 쪽 급변동 → 개인 손절 유도. 결과가 좋아도 '재료 소멸'로 누를 수 있음`] :
-            (N && h < N.dS ? ['재매수 구간', '이벤트 공포·실망에 개인이 하락 쪽으로 돌아설 때 외국인은 선물을 싸게 다시 삼. 확인 = 외국인 선물 순매수 + 개인 풋 매수·콜 매도'] :
-            ['끌어올림 구간', `이벤트를 상승 계기로 씀('불확실성 해소') → 개인 콜 매도 손익분기${O_.tBz ? '(' + Math.round(O_.tBz.lo).toLocaleString() + '~)' : ''} 쪽 압력. 개인이 따라 사면 한 번 더 흔듦`]));
-          const us = t => /미 |미국|FOMC|CPI|고용|PCE|S&P/.test(t);
-          const rowsE = Object.entries(by).sort().map(([d, es]) => { const h = tds.indexOf(d) + 1, ph = phase(h), t = es.join(' · ');
-            return `<tr><td>${fdd(d)} <span class="sub" style="display:inline">D+${h}</span></td><td style="text-align:left;white-space:normal">${t}</td><td><b>${ph[0]}</b></td><td style="text-align:left;white-space:normal">${ph[1]}${us(t) ? '<br><span class="sub">미국 시간 이벤트 → 한국 야간선물(18:00~06:00)에서 먼저 움직임 · 주간 현물 수급과 엇갈릴 수 있음(눈속임 주의)</span>' : ''}</td></tr>`; }).join('');
-          return `<div style="margin-top:10px"><b>매크로 일정 × 외국인 활용</b> <span class="sub" style="display:inline">(방향은 수급으로만 · 이벤트 = 외국인이 킬·재매수·끌어올림에 쓰는 명분과 타이밍 · 차트 주황 표시 · 규칙 템플릿 가설)</span>
-            <div class="scroll" style="margin-top:6px"><table><tr><th>날짜</th><th style="text-align:left">일정</th><th>경로 단계</th><th style="text-align:left">외국인이 어떻게 이용할까</th></tr>${rowsE}</table></div></div>`;
-        })()}
         <details style="margin-top:8px"><summary class="sub" style="cursor:pointer"><b>날짜별 표</b> — 조건부 경로값·범위·아래꼬리/윗꼬리 가능 레벨·일정</summary>
         <div class="scroll" style="margin-top:6px"><table><tr><th>날짜</th><th>단계</th><th>조건부 경로값</th><th>출발 대비</th><th>예상 범위</th><th>아래꼬리 가능</th><th>윗꼬리 가능</th><th style="text-align:left">일정</th></tr>${tr}</table></div>
         <div class="scroll" style="margin-top:6px"><table><tr><th style="text-align:left">꼬리 근거</th><th>지금 20일 평균 변동</th><th>같은 변동 국면 표본</th><th>아래꼬리 1%↑ 빈도</th><th>윗꼬리 1%↑ 빈도</th><th>아래꼬리 중앙</th><th>윗꼬리 중앙</th></tr>
