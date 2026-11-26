@@ -711,7 +711,7 @@ async function initBottom() {
   ln(S.q95, '#e0343a', 'right', '95%', 1, 2);
   ch.timeScale().fitContent();
 }
-setTimeout(initBottom);
+// setTimeout(initBottom);  // 2026-11-26 사용자 요청: 지수 바닥 신호 카드 숨김(로직 유지)
 // ── 사모·투신 유의미 매수 — 1개월(20일)·1주(5일)·당일 (research/inst_top50.py → inst_flow_table.json) ──
 let IFT = null, ifSort = 'both20', ifOnly = true, ifQ = '', ifOld = false;
 async function initInstTable() {
