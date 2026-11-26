@@ -230,6 +230,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <section class="card" id="regcard" style="display:none"></section>
   <section class="card" id="tdcard" style="display:none"></section>
   <section class="card" id="candcard" style="display:none"></section>
+  <section class="card" id="plancard" style="display:none"></section>
   <section class="card" id="ppcard" style="display:none"></section>
   <section class="card" id="k6card" style="display:none"></section>
   <section class="card" id="botcard" style="display:none"></section>
@@ -985,6 +986,25 @@ async function initPaper() {
   $('#ppcard').onclick = e => { const c = e.target.closest('[data-c]'); if (c) openStock(c.dataset.c); };
 }
 setTimeout(initPaper);
+// ── 운용안 장부 (research/trade_plan_orders.py, 2026-11-26 사용자 채택: 3천만·15칸·경고≤1·S1 교체) ──
+async function initPlan() {
+  if (META.market !== 'KR') return;
+  let P; try { P = await (await fetch(`${META.charts}/plan.json`, {cache: 'no-store'})).json(); } catch (e) { return; }
+  const w = x => (x > 0 ? '+' : '') + Math.round(x).toLocaleString() + '원', pc = x => x == null ? '–' : (x > 0 ? '+' : '') + x + '%';
+  const hrow = h => `<tr data-c="${h.code}" style="cursor:pointer"><td>${h.slot}</td><td style="text-align:left"><b>${h.name}</b></td><td>${fmtD(h.buy_date)}</td><td>${Math.round(h.buy_px).toLocaleString()}</td><td>${Math.round(h.last).toLocaleString()}</td><td class="${sign(h.ret)}"><b>${pc(h.ret)}</b></td><td>${h.shares.toLocaleString()}</td><td>${h.value.toLocaleString()}</td></tr>`;
+  const trow = o => `<tr data-c="${o.code}" style="cursor:pointer"><td>${o.side === 'BUY' ? '<b class="up">신규 진입</b>' : '<b class="down">편출</b>'}</td><td style="text-align:left"><b>${o.name}</b></td><td>${o.qty.toLocaleString()}</td><td>${Math.round(o.ref_px).toLocaleString()}</td><td>${o.slot}</td><td style="text-align:left" class="sub">${o.reason}${o.side === 'BUY' ? ' · 경고 ' + o.warnings : ''}</td></tr>`;
+  const crow = c => `<tr data-c="${c.code}" style="cursor:pointer"><td>${fmtD(c.date)}</td><td style="text-align:left"><b>${c.name}</b></td><td>${c.slot}</td><td class="${sign(c['ret%'])}"><b>${pc(c['ret%'])}</b></td></tr>`;
+  $('#plancard').style.display = '';
+  $('#plancard').innerHTML = `<div class="sec-h">운용안 장부 — 3천만 원 · 15칸 <span class="sub">${fmtD(P.start)}부터 · ${P.rule} · 신호일 종가 체결 가정, 비용 반영 · 실제 주문은 직접</span></div>
+    <div style="padding:6px 20px;display:flex;gap:22px;flex-wrap:wrap">
+      <div>평가 <b>${Math.round(P.value).toLocaleString()}원</b> <b class="${sign(P.ret)}">${pc(P.ret)}</b></div><div>보유 <b>${P.holdings.length}</b>/${P.slots}칸 · 현금 ${Math.round(P.cash).toLocaleString()}원</div>
+      <div>청산 ${P.n_closed}건${P.n_closed ? ' · 승률 ' + P.win + '%' : ''}</div></div>
+    <div style="padding:0 20px 4px"><b>${fmtD(P.date)} 장 마감 주문</b></div><div style="overflow-x:auto;padding:0 20px"><table><tr><th>구분</th><th style="text-align:left">종목</th><th>수량</th><th>기준가</th><th>칸</th><th style="text-align:left">사유</th></tr>${P.today.map(trow).join('') || '<tr><td colspan="6" class="empty">오늘 주문 없음</td></tr>'}</table></div>
+    <div style="padding:10px 20px 4px"><b>보유 중</b></div><div style="overflow-x:auto;padding:0 20px"><table><tr><th>칸</th><th style="text-align:left">종목</th><th>매수일</th><th>매수가</th><th>현재가</th><th>수익률</th><th>수량</th><th>평가(원)</th></tr>${P.holdings.map(hrow).join('') || '<tr><td colspan="8" class="empty">보유 종목 없음 (전부 현금)</td></tr>'}</table></div>
+    <div style="padding:10px 20px 4px"><b>최근 청산</b></div><div style="overflow-x:auto;padding:0 20px 14px"><table><tr><th>날짜</th><th style="text-align:left">종목</th><th>칸</th><th>수익률</th></tr>${P.closed.map(crow).join('') || '<tr><td colspan="4" class="empty">아직 청산 없음</td></tr>'}</table></div>`;
+  $('#plancard').onclick = e => { const c = e.target.closest('[data-c]'); if (c) openStock(c.dataset.c); };
+}
+setTimeout(initPlan);
 // -- K6 intraday paper (research/k6_paper.py, 2026-11-26, #72/#74 surviving rule, forward only) --
 async function initK6() {
   let J; try { J = await (await fetch(`${META.charts}/k6_paper.json`, {cache: 'no-store'})).json(); } catch (e) { return; }
