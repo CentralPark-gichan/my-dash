@@ -82,6 +82,10 @@ if (!FULL) { Object.keys(EVS).forEach(k => { if (!CORE.has(k)) delete EVS[k]; })
   J.events = J.events.filter(e => CORE.has(e.t)).map(ren); J.now.recent = J.now.recent.filter(e => CORE.has(e.t)).map(ren);
   CORE.add(G1n); VERIFIED.add(G1n); SHOW = new Set(CORE); }
 Object.entries(DRAFT_EV).forEach(([k, v]) => { EVS[k] = v; SHOW.add(k); });
+// 2026-11-26 사용자 '모든 신호 모양은 통일, 확률적으로 강할수록 크게': 수정중에서 모양 = ●, 크기 = 신호 뒤 20일 방향 맞춘 수익·적중(#87·#89 고정값)
+const SIZE = !true ? {} : {'인간지표 H2 공포 항복': 23, '인간지표 H1 투매일': 21, '★ 최종 바닥1': 20, '★ 최종 바닥2': 20, '★ 최종 고점1': 17, '월초 판정: 상승': 15, '월초 판정: 하락': 12, '★ 최종 고점2': 11, '수정안: 인간본성 반영 ▲': 10};
+const SIZE_WHY = {'인간지표 H2 공포 항복': '20일 +4.6% · 적중 78%', '인간지표 H1 투매일': '20일 +3.6% · 67%', '★ 최종 바닥1': '20일 +3.5% · 75%', '★ 최종 바닥2': '20일 +3.5% · 78%', '★ 최종 고점1': '20일 하락 쪽 +2.7% · 75%', '월초 판정: 상승': '월간 ▲ 적중 74%', '월초 판정: 하락': '월간 ▼ 적중 64%', '★ 최종 고점2': '20일 +0.9% · 57%', '수정안: 인간본성 반영 ▲': '약함(무작위 대조 72%)'};
+if (true) Object.keys(EVS).forEach(k => { EVS[k][0] = '●'; });
 const N = J.now;
 document.getElementById('hd').textContent = `기준 ${fd(J.date)} 종가 · 평일 18:00 전 자동 갱신`;
 document.getElementById('now').innerHTML = `
@@ -122,7 +126,7 @@ const setTF = tf => { TF = tf; VS = makeBars(tf); document.querySelectorAll('#tf
 document.getElementById('tf').innerHTML = [['D', '일봉'], ['W', '주봉'], ['M', '월봉']].map(([t, n]) => `<button data-t="${t}">${n}</button>`).join('');
 document.getElementById('tf').onclick = e => { const b = e.target.closest('button'); if (b) setTF(b.dataset.t); };
 document.getElementById('rng').onclick = e => { const b = e.target.closest('button'); if (b) setRange(+b.dataset.n); };
-document.getElementById('legend').innerHTML = Object.entries(EVS).map(([k, [s, c]]) => `<span data-k="${k}" style="cursor:pointer;opacity:${SHOW.has(k) ? 1 : .35}"><b style="color:${c}">${s}</b>${k}${VERIFIED.has(k) ? ' <b style="color:#16a34a;font-size:10px">검증✓</b>' : ''}${NOTE[k] ? ` <b title="${NOTE[k]}" style="color:#9aa0aa;font-size:10px">참고</b>` : ''}</span>`).join('') +
+document.getElementById('legend').innerHTML = Object.entries(EVS).map(([k, [s, c]]) => `<span data-k="${k}" style="cursor:pointer;opacity:${SHOW.has(k) ? 1 : .35}"><b style="color:${c};font-size:${SIZE[k] ? SIZE[k] * 0.8 : 13}px">${s}</b>${k}${VERIFIED.has(k) ? ' <b style="color:#16a34a;font-size:10px">검증✓</b>' : ''}${NOTE[k] ? ` <b title="${NOTE[k]}" style="color:#9aa0aa;font-size:10px">참고</b>` : ''}</span>`).join('') +
   (!FULL ? '' : J.lvl ? ['up', 'dn'].map(t => `<span>${t === 'up' ? '상승장' : '하락장'}${t === 'up' ? ' 힘' : ''} ` + (t === 'up' ? [1, 2, 3] : [1]).map(l => `<i title="${['', '강', '중', '약'][l]}" style="display:inline-block;width:14px;height:10px;background:var(--${t}${t === 'up' ? l : 2});border:1px solid var(--line);margin-left:2px"></i>`).join('') + (t === 'up' ? ' 강→약' : '') + '</span>').join('') + '<span class="sub">상승장: 최근 60일 고점 신호가 3·4종류↑ 쌓이면 옅어짐(방향 참고용) · 하락장: 단일 색(하락장 힘 구분은 분할 검증 실패)</span>' :
   '<span><i style="display:inline-block;width:14px;height:10px;background:var(--upbg);border:1px solid var(--line)"></i>' + (true ? '시장추세(매월) ▲ 달' : '상승 추세') + '</span><span><i style="display:inline-block;width:14px;height:10px;background:var(--dnbg);border:1px solid var(--line)"></i>' + (true ? '시장추세(매월) ▼ 달 (■ 관망 달은 배경 없음)' : '하락 추세') + '</span>');
 document.getElementById('legend').onclick = e => { const s = e.target.closest('span[data-k]'); if (!s) return; const k = s.dataset.k; SHOW.has(k) ? SHOW.delete(k) : SHOW.add(k); s.style.opacity = SHOW.has(k) ? 1 : .35; draw(); };
@@ -161,8 +165,9 @@ function draw() {
   J.events.filter(e => SHOW.has(e.t) && VS.at[keyOf(e.d, TF)] !== undefined && VS.at[keyOf(e.d, TF)] >= a && VS.at[keyOf(e.d, TF)] < b).forEach(e => {
     const [s, c, kind] = EVS[e.t], i = VS.at[keyOf(e.d, TF)] - a, top = ['top', 'top2', 'down'].includes(kind);
     const k_ = top ? (cntTop[i] = (cntTop[i] || 0) + 1) : (cntBot[i] = (cntBot[i] || 0) + 1);
-    const y = top ? Y(Hh[i]) - 6 - (k_ - 1) * 13 : Y(Lw[i]) + 15 + (k_ - 1) * 13;
-    g += `<text x="${X(i)}" y="${y}" font-size="${kind === 'low' ? 12 : 13}" text-anchor="middle" fill="${c}" data-t="${fd(e.d)} ${e.t}${e.why ? ' — ' + e.why : ''} · KOSPI ${won(e.p)}" style="cursor:help;font-weight:700">${s}</text>`;
+    const fs = SIZE[e.t] || (kind === 'low' ? 12 : 13), gap = Math.max(13, fs);
+    const y = top ? Y(Hh[i]) - 6 - (k_ - 1) * gap : Y(Lw[i]) + fs * 0.9 + 4 + (k_ - 1) * gap;
+    g += `<text x="${X(i)}" y="${y}" font-size="${fs}" text-anchor="middle" fill="${c}" data-t="${fd(e.d)} ${e.t}${e.why ? ' — ' + e.why : ''}${SIZE_WHY[e.t] && true ? ' · 과거 ' + SIZE_WHY[e.t] : ''} · KOSPI ${won(e.p)}" style="cursor:help;font-weight:700">${s}</text>`;
   });
   g += `<rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="hov"/></svg>`;
   const el = document.getElementById('chart'); el.innerHTML = g;
