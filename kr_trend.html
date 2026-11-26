@@ -638,6 +638,8 @@ async function initRegime() {
   ch.addLineSeries({color: '#4f46e5', lineWidth: 1.5, priceScaleId: 'right', priceLineVisible: false, title: 'F&G'}).setData(tt.map((t, i) => R.fg_s[i] == null ? null : {time: t, value: R.fg_s[i]}).filter(Boolean));
   [[60, '추세'], [40, '비추세'], [30, '역추세']].forEach(([v, t]) => b.createPriceLine({price: v, color: css('--muted'), lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: t}));
   ch.timeScale().fitContent();
+  // 2026-11-26: 숨은 탭에서 폭 0으로 그려져 x축이 오른쪽에 뭉치던 문제 → 크기가 바뀌면(탭 표시 포함) 다시 맞춤
+  new ResizeObserver(() => ch.timeScale().fitContent()).observe($('#regchart'));
   // ── 군중 심리 계기판: 공포탐욕 (research/fear_greed.py) ──
   let F; try { F = await (await fetch(`${META.charts}/fear_greed.json`)).json(); } catch (e) { return; }
   const fcol = v => v <= 20 ? '#2f6fe0' : v <= 40 ? '#4f8ff0' : v < 60 ? 'var(--muted)' : v < 80 ? '#e07a34' : '#e0343a';
