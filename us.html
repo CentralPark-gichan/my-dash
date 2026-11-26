@@ -1055,7 +1055,7 @@ async function initOpt() {
     <div class="sub" style="padding:0 20px 6px;line-height:1.7">행사가별 '외국인' 포지션은 KRX 공개 통계에 없어(HTS 전용) 전체 미결제약정 분포 + 외국인 콜·풋 순매수로 판단합니다. 5일 OI 증감: 외가 풋 ${(S.dz.otm_put || 0).toLocaleString()} · 등가 ${(S.dz.atm || 0).toLocaleString()} · 외가 콜 ${(S.dz.otm_call || 0).toLocaleString()}계약</div>
     <div style="padding:0 16px 18px">${svg}</div>`);
 }
-setTimeout(initOpt);
+// setTimeout(initOpt);  // 2026-11-26 사용자 요청: 국내 정배열 페이지에서 외국인 옵션 포지션 카드 숨김(로직 유지)
 // ── 종목 검색 → 종목 분석 화면 (차트·수급·RS·ETF·업종·리포트) ──
 let SIDX = null, sqSel = 0, sqItems = [];
 const getJ = async (k, f) => { if (window[k] !== undefined) return window[k]; try { window[k] = await (await fetch(`${META.charts}/${f}`)).json(); } catch (e) { window[k] = null; } return window[k]; };
