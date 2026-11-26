@@ -16,7 +16,7 @@ svg text{font-family:inherit}table{border-collapse:collapse;width:100%;font-size
 .up{color:var(--up)}.down{color:var(--down)}
 /* 2026-11-22 가독성 */html,body{overflow-x:hidden}body{font-size:15px;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}h1{margin:6px 0 2px}h2{font-size:17px;line-height:1.4;margin:0 0 8px}.sub{font-size:13px;line-height:1.6}.card{padding:16px 18px;margin:14px 0;min-width:0}table{font-size:13px}th,td{padding:7px 8px}.lg{font-size:13px}.seg button{font-size:13px}.kpi b{font-size:19px}details.card summary{cursor:pointer;font-size:16px;line-height:1.5}details.card summary .sub{font-size:13px}details.card[open] summary{margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 </style></head><body><div class="wrap">
-<nav><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="pe_flow.html">사모투신 수급전략</a><a href="market_trend.html" class="on">시장 추세</a><a href="monthly_trend.html">시장추세(매월)</a></nav>
+<nav><a href="kr_trend.html">국내 추세·눌림목</a><a href="us.html">미국 추세·눌림목</a><a href="pe_flow.html">사모투신 수급전략</a><a href="market_trend.html" class="on">시장 추세</a><a href="monthly_trend.html">시장추세(매월)</a><a href="market_trend_draft.html">시장추세(수정중)</a></nav>
 <h1>KOSPI 시장 추세</h1><div class="sub" id="hd"></div>
 <div class="card"><div class="kpis" id="now"></div><div class="sub" id="recent" style="margin-top:10px;line-height:1.8"></div></div>
 <div class="card" id="flow" style="display:none"></div>
@@ -51,7 +51,7 @@ const EVS = {'추세 전환(→상승)': ['▲', '#e0343a', 'up'], '추세 전�
 const fd = d => `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}`, won = v => Math.round(v).toLocaleString('ko-KR');
 const VERIFIED = new Set(['★ 최종 바닥1', '★ 최종 바닥2', '★ 최종 고점2', '추세 훼손(40일선)', '단기 반등 예상', 'CTA 쏠림 급락(고점 근처)', '옵션 바닥 핵심신호', '보조 바닥: BB 하단 재진입 + HV 공포', '보조 바닥: 아무 트리거 + 바닥권 4개↑', '외국인: 외국인 투매 극단', '외국인: 투매 뒤 외국인 순매수 전환', '고점 경고: 월초 외인 현물매도+옵션 콜쏠림', '월초 판정: 상승', '월초 판정: 하락']);
 // 2026-11-26 #88 처음 보는 자료(코스피 2001~09 + 10개 시장): 아래 3개는 신호 뒤 20일 지수가 오히려 오름(적중 34~46%) → 매도 신호가 아닌 '이미 빠졌다'는 참고 기록
-const NOTE = {'추세 전환(→하락)': '참고: 이미 빠졌다는 기록 — 매도 신호 아님(#88, 11개 자료 중 8곳에서 신호 뒤 상승)', '천장 시그널': '참고: 매도 신호 아님(#88, 11/11 자료에서 신호 뒤 상승)', '천장에서 하락 전환': '참고: 매도 신호 아님(#88, 11/11 자료에서 신호 뒤 상승, 적중 34%)'};
+const NOTE = !false ? {} : {'추세 전환(→하락)': '참고: 이미 빠졌다는 기록 — 매도 신호 아님(#88, 11개 자료 중 8곳에서 신호 뒤 상승)', '천장 시그널': '참고: 매도 신호 아님(#88, 11/11 자료에서 신호 뒤 상승)', '천장에서 하락 전환': '참고: 매도 신호 아님(#88, 11/11 자료에서 신호 뒤 상승, 적중 34%)'};
 let RANGE = 250, VA = null, VB = null, GEO = {L: 52, R: 12, W: 800}, SHOW = new Set(['★ 최종 바닥1', '★ 최종 바닥2', '★ 최종 고점2', '옵션 바닥 핵심신호', '보조 바닥: BB 하단 재진입 + HV 공포', '보조 바닥: 아무 트리거 + 바닥권 4개↑', '외국인: 투매 뒤 외국인 순매수 전환', '고점 경고: 월초 외인 현물매도+옵션 콜쏠림', '월초 판정: 상승', '월초 판정: 하락']);
 const FULL = false;  // 간단 모드(기본): 핵심 신호만 표시. 전체: python research/market_trend_page.py --full
 const CORE = new Set(['추세 전환(→상승)', '추세 전환(→하락)', '추세 전환(→횡보)', '★ 최종 바닥1', '★ 최종 바닥2', '★ 최종 고점2', '고점 경고: 월초 외인 현물매도+옵션 콜쏠림', '월초 판정: 상승', '월초 판정: 하락']);
