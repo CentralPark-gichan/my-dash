@@ -231,6 +231,7 @@ tbody tr{transition:background .1s}tbody tr.sel{box-shadow:inset 3px 0 0 var(--a
   <section class="card" id="tdcard" style="display:none"></section>
   <section class="card" id="candcard" style="display:none"></section>
   <section class="card" id="plancard" style="display:none"></section>
+  <section class="card" id="fgatecard" style="display:none"></section>
   <section class="card" id="ppcard" style="display:none"></section>
   <section class="card" id="k6card" style="display:none"></section>
   <section class="card" id="botcard" style="display:none"></section>
@@ -1007,6 +1008,32 @@ async function initPlan() {
   $('#plancard').onclick = e => { const c = e.target.closest('[data-c]'); if (c) openStock(c.dataset.c); };
 }
 setTimeout(initPlan);
+// ── 외국인 이해관계 게이트 (research/fgate_page.py, 2026-11-28 사용자: 좋은 종목도 외인이 지금 올라서 돈 버는 구조가 아니면 못 오른다) ──
+async function initFgate() {
+  if (META.market !== 'KR') return;
+  let G; try { G = await (await fetch(`${META.charts}/fgate.json`, {cache: 'no-store'})).json(); } catch (e) { return; }
+  const ic = {pass: '🟢 통과', wait: '🟡 대기', dist: '🔴 분배'}, eok = x => (x > 0 ? '+' : '') + (Math.abs(x) < 10 ? x.toFixed(1) : Math.round(x).toLocaleString()) + '억';
+  let flt = 'all';
+  const draw = () => {
+    const R = G.rows.filter(r => flt === 'all' || r.state === flt || r.grp === flt || (flt === '보유' && /보유|진입|편출/.test(r.grp)));
+    const row = r => `<tr data-c="${r.code}" style="cursor:pointer"><td>${r.grp}</td><td style="text-align:left"><b>${r.name}</b></td><td>${ic[r.state]}</td>
+      <td>${r.avg ? r.avg.toLocaleString() : (r.unstable ? '<span class="sub">불안정</span>' : '–')}</td><td class="${sign(r.pnl)}">${r.pnl == null ? '–' : (r.pnl > 0 ? '+' : '') + r.pnl + '%'}</td>
+      <td class="${sign(r.f20)}">${eok(r.f20)}</td><td class="${sign(-r.i20)}">${eok(r.i20)}</td></tr>`;
+    const B = G.breadth, btn = (k, t) => `<button data-f="${k}" style="margin-right:6px;${flt === k ? 'font-weight:700' : ''}">${t}</button>`;
+    $('#fgatecard').innerHTML = `<div class="sec-h">외국인 이해관계 게이트 <span class="sub">${fmtD(G.date)} · 외인이 지금 올라서 돈 버는 구조인가 · 통과 = 외인 60일 순매집 & 현재가 > 외인 추정 평단 & 외인 20일 순매수 & 개인 20일 순매수 ≤ 0 · 분배 = 외인 매도·개인 매수</span></div>
+      <div style="padding:6px 20px;display:flex;gap:22px;flex-wrap:wrap">
+        <div>시장 온도(거래대금 30억↑ ${B.n}종목): 🟢 <b>${B.pass}%</b> <span class="sub">(평소 ${G.hist.pass}%)</span> · 🔴 <b>${B.dist}%</b> <span class="sub">(평소 ${G.hist.dist}%)</span> · 🟡 ${B.wait}%</div></div>
+      <div class="sub" style="padding:0 20px 6px">검증: ${G.test} · 단독 매수 신호 아님, 좋은(추세) 종목 안에서 거르는 용도</div>
+      <div style="padding:0 20px 6px">${btn('all', '전체')}${btn('pass', '🟢 통과')}${btn('dist', '🔴 분배')}${btn('보유', '보유(모의·운용안)')}${btn('추세', '추세 종목')}${btn('시총 상위', '시총 상위')}</div>
+      <div style="overflow-x:auto;padding:0 20px 14px;max-height:520px;overflow-y:auto"><table><tr><th>구분</th><th style="text-align:left">종목</th><th>게이트</th><th>외인 60일 평단</th><th>외인 손익</th><th>외인 20일</th><th>개인 20일</th></tr>
+      ${R.map(row).join('') || '<tr><td colspan="7" class="empty">해당 종목 없음</td></tr>'}</table></div>`;
+  };
+  $('#fgatecard').style.display = '';
+  draw();
+  $('#fgatecard').onclick = e => { const b = e.target.closest('[data-f]'); if (b) { flt = b.dataset.f; draw(); return; } const c = e.target.closest('[data-c]'); if (c) openStock(c.dataset.c); };
+}
+setTimeout(initFgate);
+
 // -- K6 intraday paper (research/k6_paper.py, 2026-11-26, #72/#74 surviving rule, forward only) --
 async function initK6() {
   let J; try { J = await (await fetch(`${META.charts}/k6_paper.json`, {cache: 'no-store'})).json(); } catch (e) { return; }
